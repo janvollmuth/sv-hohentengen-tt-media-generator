@@ -113,6 +113,9 @@ var OUTCOMES = [['Sieg','#2f9e44'],['Niederlage','#2B2B30'],['Unentschieden','#E
 var STORE = 'svh-story-generator-v2';
 var BLANK = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1200"><rect width="1080" height="1200" fill="#26252c"/><text x="540" y="615" font-family="Helvetica,sans-serif" font-size="44" fill="#7c7a85" text-anchor="middle">Foto hier auswaehlen</text></svg>');
 
+var LOCKED = ['heimspiel','sv hohentengen','gegen','liga','termin','halle','endstand','uhr','anwurf','datum','spieltag','heim','gast','heute','abend','heute abend','eintritt frei'];
+function isLocked(t){ return LOCKED.indexOf(String(t).replace(/[\u00ad\u200b]/g,'').trim().toLowerCase()) > -1; }
+
 var state = { dir:null, screen:null, overrides:{}, outcome:'Sieg' };
 var photos = {};
 try { var saved = JSON.parse(localStorage.getItem(STORE) || '{}'); if (saved.overrides) state.overrides = saved.overrides; if (saved.outcome) state.outcome = saved.outcome; } catch (e) {}
@@ -253,7 +256,7 @@ function buildFields() {
   var seen = {};
   Array.prototype.forEach.call(node.querySelectorAll('[data-t]'), function (el) {
     var k = el.getAttribute('data-t');
-    if (seen[k]) return;
+    if (seen[k] || isLocked(k)) return;
     seen[k] = true;
     var wrap = document.createElement('div');
     wrap.className = 'f';
