@@ -1,0 +1,38 @@
+[
+  {
+    "id": "H",
+    "name": "Standard",
+    "description": "Passt immer: alle Anlässe, alle Formate. Dunkel mit Clubrot.",
+    "file": "designs/H.html"
+  },
+  {
+    "id": "A",
+    "name": "Wappen",
+    "description": "Vereinswappen groß im Hintergrund, gedeckte Grauwerte. Ohne Foto. Nur Story.",
+    "file": "designs/A.html"
+  },
+  {
+    "id": "B",
+    "name": "Foto & Rot",
+    "description": "Foto oben, Clubrot als Signalfarbe, Ball-Motive. Nur Story.",
+    "file": "designs/B.html"
+  },
+  {
+    "id": "C",
+    "name": "Anzeigetafel",
+    "description": "Wie die Tafel in der Halle: dunkles Raster, gerahmte Felder. Nur Story.",
+    "file": "designs/C.html"
+  },
+  {
+    "id": "D",
+    "name": "Hell",
+    "description": "Heller Hintergrund, schräge rote Bänder, viel Luft. Alle Anlässe, alle Formate.",
+    "file": "designs/D.html"
+  },
+  {
+    "id": "E",
+    "name": "Vollbild",
+    "description": "Foto über die ganze Fläche, Text darauf. Alle Anlässe, alle Formate.",
+    "file": "designs/E.html"
+  }
+]
