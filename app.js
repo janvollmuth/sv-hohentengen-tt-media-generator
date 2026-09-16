@@ -50,6 +50,8 @@ var FIELDS = [
       erinnerung: 'Wir brauchen euch — kommt vorbei!',
       ergebnis: 'Danke für eure Unterstützung!'
     } },
+  { id: 'verpflegung', label: 'Hinweis Bewirtung', def: 'Für Essen und Getränke ist gesorgt!', max: 40 },
+  { id: 'hashtags', label: 'Hashtags', def: '#1948 | #nurderSVH | #tischtennis | #gemeinsamfürdenSVH', max: 58 },
   { id: 'termin', computed: function (v) { return v.datum + ' · ' + v.uhrzeit + ' Uhr'; } },
   { id: 'paarung', computed: function (v) { return 'SV Hohentengen – ' + v.gegner; } }
 ];
@@ -359,6 +361,14 @@ function bindCropDrag(img, occ) {
   img.__cropBound = true;
   img.style.touchAction = 'none';
   img.style.pointerEvents = 'auto';
+  var pinch = null;
+  var pts = {};
+  function dist() {
+    var k = Object.keys(pts);
+    if (k.length < 2) return 0;
+    var a = pts[k[0]], b = pts[k[1]];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
   var drag = null;
   function refresh() {
     img.__cropDragging = !!drag;
@@ -366,6 +376,14 @@ function bindCropDrag(img, occ) {
   }
   img.addEventListener('pointerdown', function (e) {
     if (!state.photos[occ]) return;
+    pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (Object.keys(pts).length === 2) {
+      drag = null;
+      pinch = { d: dist(), z: cropOf(occ).z };
+      refresh();
+      e.preventDefault();
+      return;
+    }
     var r = img.getBoundingClientRect();
     var c = cropOf(occ);
     drag = {
@@ -377,6 +395,13 @@ function bindCropDrag(img, occ) {
     e.preventDefault();
   });
   img.addEventListener('pointermove', function (e) {
+    if (pts[e.pointerId]) { pts[e.pointerId].x = e.clientX; pts[e.pointerId].y = e.clientY; }
+    if (pinch) {
+      var d = dist();
+      if (pinch.d > 8 && d > 8) setZoom(occ, pinch.z * d / pinch.d);
+      e.preventDefault();
+      return;
+    }
     if (!drag) return;
     var dx = (e.clientX - drag.px) / drag.sc, dy = (e.clientY - drag.py) / drag.sc;
     if (!drag.checked && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
@@ -398,7 +423,9 @@ function bindCropDrag(img, occ) {
     paintAll();
     syncZoomUI(occ);
   });
-  function end() {
+  function end(e) {
+    if (e && e.pointerId != null) delete pts[e.pointerId];
+    if (pinch && Object.keys(pts).length < 2) { pinch = null; persist(); refresh(); return; }
     if (!drag) return;
     drag = null;
     persist(); refresh();
@@ -423,7 +450,7 @@ var zoomUI = null;
 function syncZoomUI(occ) {
   if (!zoomUI) return;
   var z = cropOf(occ).z;
-  zoomUI.input.value = String(Math.round(z * 100));
+  if (zoomUI.input) zoomUI.input.value = String(Math.round(z * 100));
   zoomUI.out.textContent = Math.round(z * 100) + ' %';
 }
 
@@ -766,26 +793,37 @@ function photoBlock(occ) {
 }
 
 function cropBlock(occ) {
+  var touch = matchMedia('(hover:none) and (pointer:coarse)').matches;
   var box = document.createElement('div');
   box.className = 'crop';
 
   var hint = document.createElement('div');
   hint.className = 'crop-t';
-  hint.textContent = 'Ausschnitt: im Vorschaubild ziehen. Bei 100 % füllt das Foto eine Richtung genau aus — quer dazu zoomt es beim Ziehen automatisch ein Stück mit.';
+  hint.textContent = touch
+    ? 'Ausschnitt: im Vorschaubild mit einem Finger schieben, mit zwei Fingern zoomen.'
+    : 'Ausschnitt: im Vorschaubild ziehen. Bei 100 % füllt das Foto eine Richtung genau aus — quer dazu zoomt es beim Ziehen automatisch ein Stück mit.';
   box.appendChild(hint);
 
   var row = document.createElement('div');
   row.className = 'crop-row';
 
-  var input = document.createElement('input');
-  input.type = 'range';
-  input.min = '100'; input.max = '260'; input.step = '2';
-  input.setAttribute('aria-label', 'Zoom');
   var out = document.createElement('span');
   out.className = 'crop-v';
 
-  zoomUI = { input: input, out: out };
-  input.addEventListener('input', function () { setZoom(occ, Number(input.value) / 100); });
+  if (touch) {
+    /* Am Handy ersetzt die Zwei-Finger-Geste den Regler. */
+    zoomUI = { input: null, out: out };
+    out.style.textAlign = 'left';
+    row.appendChild(out);
+  } else {
+    var input = document.createElement('input');
+    input.type = 'range';
+    input.min = '100'; input.max = '260'; input.step = '2';
+    input.setAttribute('aria-label', 'Zoom');
+    zoomUI = { input: input, out: out };
+    input.addEventListener('input', function () { setZoom(occ, Number(input.value) / 100); });
+    row.appendChild(input); row.appendChild(out);
+  }
 
   var reset = document.createElement('button');
   reset.type = 'button';
@@ -795,7 +833,7 @@ function cropBlock(occ) {
     resetCrop(occ); persist(); paintAll(); syncZoomUI(occ);
   });
 
-  row.appendChild(input); row.appendChild(out); row.appendChild(reset);
+  row.appendChild(reset);
   box.appendChild(row);
   syncZoomUI(occ);
   return box;
@@ -868,8 +906,8 @@ function sync() {
   packBtn.textContent = 'Alle ' + others.length + ' Formate als Paket';
 
   hintEl.textContent = fmt.id === 'a4'
-    ? 'A4 mit 300 dpi — zum Ausdrucken oder per Mail an die Druckerei.'
-    : fmt.note + ' px. Auf dem Handy öffnet sich das Teilen-Menü (Instagram, Bilder speichern), am Rechner landet das PNG im Download-Ordner.';
+    ? 'A4 mit 300 dpi — zum Ausdrucken oder per Mail an die Druckerei. Nach dem Erzeugen kannst du teilen oder speichern.'
+    : fmt.note + ' px. Nach dem Erzeugen kannst du teilen oder speichern — Teilen (Instagram, WhatsApp) bietet der Browser am Handy an.';
 
   buildFields();
   paintAll();
@@ -1010,12 +1048,7 @@ function renderFile(occ, fmtId, designId) {
     .then(function (r) { return r.blob(); })
     .then(function (blob) { return new File([blob], fileName(occ, fmt), { type: 'image/png' }); });
 }
-function deliver(files) {
-  files = files.filter(Boolean);
-  if (!files.length) return Promise.resolve();
-  if (navigator.canShare && navigator.canShare({ files: files })) {
-    return navigator.share({ files: files, title: 'SVH Media' }).catch(function () {});
-  }
+function downloadAll(files) {
   return files.reduce(function (p, f) {
     return p.then(function () {
       var url = URL.createObjectURL(f);
@@ -1026,6 +1059,76 @@ function deliver(files) {
       return new Promise(function (r) { setTimeout(r, 450); });
     });
   }, Promise.resolve());
+}
+
+/* Fertige Dateien: teilen (geht direkt nach Instagram/WhatsApp) oder speichern.
+   Die Auswahl kommt immer — Teilen ist nur dort möglich, wo der Browser es
+   anbietet (Handy ja; Desktop und eingebettete Vorschau meist nicht). */
+function deliver(files) {
+  files = files.filter(Boolean);
+  if (!files.length) return Promise.resolve();
+  var canShare = !!(navigator.share && navigator.canShare && navigator.canShare({ files: files }));
+
+  return new Promise(function (done) {
+    var back = document.createElement('div');
+    back.className = 'sheet-back';
+    var sheet = document.createElement('div');
+    sheet.className = 'sheet';
+
+    var h = document.createElement('div');
+    h.className = 'sheet-h';
+    h.textContent = files.length > 1 ? files.length + ' Bilder fertig' : 'Bild fertig';
+    var sub = document.createElement('div');
+    sub.className = 'sheet-sub';
+    sub.textContent = files.map(function (f) { return f.name; }).join(', ');
+
+    function close(run) {
+      back.remove();
+      document.removeEventListener('keydown', onKey);
+      Promise.resolve(run ? run() : null).catch(function () {}).then(done);
+    }
+    function onKey(e) { if (e.key === 'Escape') close(null); }
+
+    sheet.appendChild(h); sheet.appendChild(sub);
+
+    var save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'sheet-b' + (canShare ? '' : ' primary');
+    save.textContent = files.length > 1 ? 'Alle speichern' : 'Speichern';
+    save.addEventListener('click', function () { close(function () { return downloadAll(files); }); });
+
+    if (canShare) {
+      var share = document.createElement('button');
+      share.type = 'button';
+      share.className = 'sheet-b primary';
+      share.textContent = 'Teilen → Instagram, WhatsApp …';
+      share.addEventListener('click', function () {
+        close(function () { return navigator.share({ files: files, title: 'SVH Media' }); });
+      });
+      sheet.appendChild(share);
+      sheet.appendChild(save);
+    } else {
+      sheet.appendChild(save);
+      var note = document.createElement('div');
+      note.className = 'sheet-note';
+      note.textContent = 'Direkt teilen kann dieser Browser nicht — am Handy erscheint hier zusätzlich „Teilen“.';
+      sheet.appendChild(note);
+    }
+
+    var cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'sheet-b ghost';
+    cancel.textContent = 'Abbrechen';
+    cancel.addEventListener('click', function () { close(null); });
+    sheet.appendChild(cancel);
+
+    back.addEventListener('click', function (e) { if (e.target === back) close(null); });
+    document.addEventListener('keydown', onKey);
+
+    back.appendChild(sheet);
+    document.body.appendChild(back);
+    (canShare ? sheet.querySelector('.primary') : save).focus();
+  });
 }
 function busy(btn, on, label) {
   btn.disabled = on;
@@ -1046,20 +1149,48 @@ oneBtn.addEventListener('click', function () {
     .then(function () { busy(oneBtn, false); });
 });
 
+/* Fortschrittsbalken mit Zähler: vier Formate brauchen zusammen einige
+   Sekunden — ohne Anzeige wirkt das wie ein Hänger. */
+function progress(total) {
+  var box = document.createElement('div');
+  box.className = 'prog';
+  var lab = document.createElement('div');
+  lab.className = 'prog-l';
+  var track = document.createElement('div');
+  track.className = 'prog-t';
+  var bar = document.createElement('div');
+  bar.className = 'prog-b';
+  track.appendChild(bar);
+  box.appendChild(lab); box.appendChild(track);
+  packBtn.parentNode.insertBefore(box, packBtn.nextSibling);
+  return {
+    step: function (n, name) {
+      lab.textContent = 'Bild ' + n + ' von ' + total + (name ? ' · ' + name : '');
+      bar.style.width = Math.round((n - 1) / total * 100) + '%';
+    },
+    doneStep: function (n) { bar.style.width = Math.round(n / total * 100) + '%'; },
+    end: function () { box.remove(); }
+  };
+}
+
 var packBtn = document.getElementById('save-pack');
 packBtn.addEventListener('click', function () {
   var list = formatsForDesign(state.occasion, state.design);
-  busy(packBtn, true, 'Erzeuge 1 von ' + list.length + ' …');
+  busy(packBtn, true, 'Erzeuge …');
+  var p = progress(list.length);
   var files = [];
-  list.reduce(function (p, f, i) {
-    return p.then(function () {
-      packBtn.textContent = 'Erzeuge ' + (i + 1) + ' von ' + list.length + ' …';
-      return renderFile(state.occasion, f.id, state.design).then(function (file) { files.push(file); });
+  list.reduce(function (prev, f, i) {
+    return prev.then(function () {
+      p.step(i + 1, f.label || f.id);
+      return renderFile(state.occasion, f.id, state.design).then(function (file) {
+        files.push(file);
+        p.doneStep(i + 1);
+      });
     });
   }, Promise.resolve())
-    .then(function () { return deliver(files); })
+    .then(function () { p.end(); return deliver(files); })
     .catch(fail)
-    .then(function () { busy(packBtn, false); });
+    .then(function () { p.end(); busy(packBtn, false); });
 });
 
 boot();
