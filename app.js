@@ -1,17 +1,34 @@
-/* SVH Media Generator
+/* SVH Mediengenerator
    Designs liegen in designs/ (Manifest: designs/manifest.json)
    Fotos liegen verschlüsselt in photos/ (Paket: photos/pack.json)
    Neue Designs, Anlässe und Fotos brauchen keine Änderung an dieser Datei –
    siehe README.md. */
 
-var OCCASIONS = [
-  { id: 'ankuendigung', label: 'Heimspiel' },
-  { id: 'erinnerung', label: 'Erinnerung' },
-  { id: 'ergebnis', label: 'Ergebnis' },
-  { id: 'portrait', label: 'Spielerporträt' },
-  { id: 'werbung', label: 'Mitglieder werben' },
-  { id: 'nachricht', label: 'Vereinsnachricht' }
+/* Abteilungen: bestimmen, welche Anlässe zur Wahl stehen. Eine neue Abteilung
+   braucht hier eine Zeile, Anlässe mit passendem dept und ein Design. */
+var DEPTS = [
+  { id: 'tt', label: 'Tischtennis' },
+  { id: 'fb', label: 'Fußball' }
 ];
+
+var OCCASIONS = [
+  { id: 'ankuendigung', label: 'Heimspiel', dept: 'tt' },
+  { id: 'erinnerung', label: 'Erinnerung', dept: 'tt' },
+  { id: 'ergebnis', label: 'Ergebnis', dept: 'tt' },
+  { id: 'portrait', label: 'Spielerporträt', dept: 'tt' },
+  { id: 'werbung', label: 'Mitglieder werben', dept: 'tt' },
+  { id: 'nachricht', label: 'Vereinsnachricht', dept: 'tt' },
+  { id: 'fbSpieltag', label: 'Spieltag', dept: 'fb' },
+  { id: 'fbErinnerung', label: 'Erinnerung', dept: 'fb' },
+  { id: 'fbErgebnis', label: 'Ergebnis', dept: 'fb' }
+];
+function deptOf(occ) {
+  var o = occasionById(occ);
+  return o.dept || 'tt';
+}
+function occasionsFor(dept) {
+  return OCCASIONS.filter(function (o) { return o.dept === dept; });
+}
 
 var FORMATS = [
   { id: 'story', label: 'Story & WhatsApp', note: '1080 × 1920', w: 1080, h: 1920, ratio: 1 },
@@ -24,16 +41,45 @@ var FORMATS = [
    scope 'occasion' = Wert gilt nur für diesen Anlass.
    computed = kein Eingabefeld, wird aus anderen Feldern gebildet. */
 var FIELDS = [
-  { id: 'gegner', label: 'Gegner', def: 'TTC Musterstadt', max: 26 },
-  { id: 'liga', label: 'Liga / Mannschaft', def: 'Bezirksklasse Gruppe 2', max: 30 },
+  /* Eigene Mannschaft: Auswahl statt Freitext, damit die Schreibweise über
+     alle Beiträge gleich bleibt. Neue Mannschaft = eine Zeile mehr.
+     scope 'dept': Tischtennis und Fußball haben eigene Mannschaften. */
+  { id: 'heim', label: 'Eigene Mannschaft', scope: 'dept',
+    defs: { tt: 'SV Hohentengen', fb: 'SV Hohentengen' },
+    optionsByDept: {
+      tt: ['SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'],
+      fb: ['SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen A-Jugend', 'SV Hohentengen B-Jugend']
+    } },
+  { id: 'gegner', label: 'Gegner', scope: 'dept', max: 26,
+    defs: { tt: 'TTC Musterstadt', fb: 'FC Beispielheim' } },
+  { id: 'liga', label: 'Liga', scope: 'dept', max: 30,
+    defs: { tt: 'Bezirksklasse Gruppe 2', fb: 'Kreisliga A' } },
+  { id: 'spieltag', label: 'Spieltag', def: '7. Spieltag', max: 18 },
   { id: 'datum', label: 'Datum', def: 'Sa, 26.09.', max: 14 },
   { id: 'uhrzeit', label: 'Uhrzeit', def: '19:30', short: true, max: 8 },
+  { id: 'anstoss', label: 'Anstoß', def: '15:00', short: true, max: 8 },
   { id: 'halle', label: 'Halle', def: 'Mehrzweckhalle, Schulstraße 5', max: 42 },
-  { id: 'punkteHeim', label: 'Punkte SVH', def: '9', short: true, max: 3 },
+  { id: 'sportplatz', label: 'Sportplatz', def: 'Sportgelände Hohentengen', max: 42 },
+  { id: 'punkteHeim', label: 'Punkte eigene Mannschaft', def: '9', short: true, max: 3 },
   { id: 'punkteGast', label: 'Punkte Gegner', def: '5', short: true, max: 3 },
+  { id: 'toreHeim', label: 'Tore eigene Mannschaft', def: '3', short: true, max: 3 },
+  { id: 'toreGast', label: 'Tore Gegner', def: '1', short: true, max: 3 },
+  { id: 'halbzeit', label: 'Halbzeitstand', def: '2:0', max: 8 },
+  /* Torschützen: eine Zeile je Tor. Leere Zeilen verschwinden im Layout,
+     damit auch ein 1:0 sauber aussieht. */
+  { id: 'tor1', label: 'Tor 1', subtitle: 'Minute und Name, z. B. „12 Max Mustermann" — Gegentor: ein G davor', def: "12' Max Mustermann", max: 26, optional: true },
+  { id: 'tor2', label: 'Tor 2', def: "34' Jonas Beispiel", max: 26, optional: true },
+  { id: 'tor3', label: 'Tor 3', def: "71' Max Mustermann", max: 26, optional: true },
+  { id: 'tor4', label: 'Tor 4', def: "G 88' L. Gegner", max: 26, optional: true },
+  { id: 'tor5', label: 'Tor 5', def: '', max: 26, optional: true },
+  { id: 'tor6', label: 'Tor 6', def: '', max: 26, optional: true },
+  { id: 'tor7', label: 'Tor 7', def: '', max: 26, optional: true },
+  { id: 'tor8', label: 'Tor 8', def: '', max: 26, optional: true },
+  { id: 'tor9', label: 'Tor 9', def: '', max: 26, optional: true },
+  { id: 'tor10', label: 'Tor 10', def: '', max: 26, optional: true },
   { id: 'ausgang', label: 'Ausgang', def: 'Sieg', options: ['Sieg', 'Niederlage', 'Unentschieden'] },
   { id: 'spielerName', label: 'Name', def: 'Max Mustermann', max: 24 },
-  { id: 'spielerRolle', label: 'Mannschaft / Position', def: 'Herren I · Abwehrspieler', max: 36 },
+  { id: 'spielerRolle', label: 'Mannschaft / Position', subtitle: 'Position wird durchnummeriert, z. B. „Herren I · Position 3"', def: 'Herren I · Position 3', max: 36 },
   { id: 'titel', label: 'Titel', scope: 'occasion', max: 40, defs: {
       werbung: 'Komm zum Probetraining',
       nachricht: 'Neuigkeiten aus der Abteilung'
@@ -44,16 +90,39 @@ var FIELDS = [
       nachricht: 'Kurz und knapp, was gerade wichtig ist: Termine, Beschlüsse, Danksagungen — was die Abteilung wissen sollte.'
     } },
   { id: 'zeiten', label: 'Trainingszeiten', def: 'Di & Do 19:00 Uhr · Mehrzweckhalle', max: 44 },
-  { id: 'kontakt', label: 'Kontakt', def: 'tischtennis@sv-hohentengen.de', max: 38 },
+  { id: 'kontakt', label: 'Kontakt', scope: 'dept', max: 38,
+    defs: { tt: 'tischtennis@sv-hohentengen.de', fb: 'fussball@sv-hohentengen.de' } },
   { id: 'zusatz', label: 'Zusätzlicher Text', scope: 'occasion', textarea: true, max: 70, defs: {
       ankuendigung: 'Kommt vorbei!',
       erinnerung: 'Wir brauchen euch — kommt vorbei!',
-      ergebnis: 'Danke für eure Unterstützung!'
+      ergebnis: 'Danke für eure Unterstützung!',
+      fbSpieltag: 'Kommt vorbei und macht Stimmung!',
+      fbErinnerung: 'Kommt vorbei und unterstützt die Mannschaft!',
+      fbErgebnis: 'Danke für eure Unterstützung!'
     } },
   { id: 'verpflegung', label: 'Hinweis Bewirtung', def: 'Für Essen und Getränke ist gesorgt!', max: 40 },
-  { id: 'hashtags', label: 'Hashtags', def: '#1948 | #nurderSVH | #tischtennis | #gemeinsamfürdenSVH', max: 58 },
+  { id: 'hashtags', label: 'Hashtags', scope: 'dept', max: 64,
+    defs: {
+      tt: '#1948 | #nurderSVH | #tischtennis | #gemeinsamfürdenSVH',
+      fb: '#1948 | #nurderSVH | #fussball | #gemeinsamfürdenSVH'
+    } },
   { id: 'termin', computed: function (v) { return v.datum + ' · ' + v.uhrzeit + ' Uhr'; } },
-  { id: 'paarung', computed: function (v) { return 'SV Hohentengen – ' + v.gegner; } }
+  { id: 'paarung', computed: function (v) { return v.heim + ' – ' + v.gegner; } },
+  /* Kürzel für den Ersatz-Wappenkreis: Vereinstyp UND Ortsname, damit zwei
+     Vereine nie dasselbe Monogramm bekommen. Kurzwörter mit mehreren
+     Großbuchstaben gelten als Abkürzung (SV, TTC, VfL → VFL), alle übrigen
+     Wörter steuern ihren Anfangsbuchstaben bei. Maximal vier Zeichen. */
+  { id: 'gegnerKuerzel', computed: function (v) {
+      var raw = String(v.gegner || '').trim();
+      if (!raw) return '?';
+      var out = '';
+      raw.split(/[\s.\-–/]+/).filter(Boolean).forEach(function (w) {
+        var caps = w.replace(/[^A-ZÄÖÜ]/g, '');
+        if (caps.length >= 2) out += (w.length <= 4 ? w.toUpperCase() : caps);
+        else out += w.charAt(0).toUpperCase();
+      });
+      return out.slice(0, 4) || '?';
+    } }
 ];
 
 var OUTCOME_COLORS = { 'Sieg': '#2f9e44', 'Niederlage': '#2B2B30', 'Unentschieden': '#E8A33D' };
@@ -62,7 +131,33 @@ var STORE = 'svh-media-generator-v1';
 var FRAME_W = 346, FRAME_H = 615;
 var BLANK = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDgwIiBoZWlnaHQ9IjEyMDAiPjxyZWN0IHdpZHRoPSIxMDgwIiBoZWlnaHQ9IjEyMDAiIGZpbGw9IiMyNjI1MmMiLz48dGV4dCB4PSI1NDAiIHk9IjYxNSIgZm9udC1mYW1pbHk9IkhlbHZldGljYSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ0IiBmaWxsPSIjN2M3YTg1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5Gb3RvIHdhZWhsZW48L3RleHQ+PC9zdmc+';
 
-var designs = [], gallery = [], nodes = {};
+/* Transparent: Logo-Plätze zeigen im Leerzustand den Ersatzkreis, der im
+   Layout hinter dem Bild liegt — kein grauer Kasten darüber. */
+var BLANK_LOGO = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"></svg>');
+
+/* Bildplätze: ein Layout kann mehrere haben (data-photo="haupt" usw.).
+   "1" ist der alte Einzelplatz und zählt als Hauptfoto. */
+var SLOTS = {
+  haupt:  { label: 'Hauptfoto', kind: 'foto' },
+  zweit:  { label: 'Zweites Foto', kind: 'foto' },
+  gegner: { label: 'Gegner-Logo', kind: 'logo' }
+};
+function slotId(img) {
+  var v = img.getAttribute('data-photo');
+  return (!v || v === '1') ? 'haupt' : v;
+}
+function slotMeta(id) { return SLOTS[id] || { label: 'Bild', kind: 'foto' }; }
+function pkey(occ, slot) { return occ + '::' + slot; }
+function slotsIn(node) {
+  var seen = {}, out = [];
+  Array.prototype.forEach.call(node.querySelectorAll('[data-photo]'), function (img) {
+    var s = slotId(img);
+    if (!seen[s]) { seen[s] = 1; out.push(s); }
+  });
+  return out;
+}
+
+var designs = [], gallery = [], logos = [], nodes = {};
 var FONTS_READY = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
 
 /* ---------- Schriften für den Export (einmal aufbereiten) ---------- */
@@ -106,19 +201,27 @@ function inlineImage(url) {
   return IMG_CACHE[url];
 }
 
-/* Fotos auf Maß bringen – hält den Export schnell, egal wie groß das Handyfoto war. */
+/* Fotos auf Maß bringen – hält den Export schnell, egal wie groß das Handyfoto war.
+   Transparenz bleibt erhalten: Vereinswappen sind PNG mit Alphakanal, ein
+   JPEG daraus hätte einen schwarzen Kasten um das Logo. */
+function alphaSource(dataUrl) {
+  return /^data:image\/(png|svg\+xml|webp|gif)/i.test(dataUrl || '');
+}
 function normalizePhoto(dataUrl) {
   return new Promise(function (res) {
     var img = new Image();
+    var keepAlpha = alphaSource(dataUrl);
     img.onload = function () {
       var long = Math.max(img.width, img.height);
-      if (long <= PHOTO_MAX && dataUrl.indexOf('data:image/jpeg') === 0) return res(dataUrl);
+      if (long <= PHOTO_MAX && (keepAlpha || dataUrl.indexOf('data:image/jpeg') === 0)) return res(dataUrl);
       var scale = Math.min(1, PHOTO_MAX / long);
       var c = document.createElement('canvas');
       c.width = Math.round(img.width * scale);
       c.height = Math.round(img.height * scale);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      try { res(c.toDataURL('image/jpeg', 0.85)); } catch (e) { res(dataUrl); }
+      try {
+        res(keepAlpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85));
+      } catch (e) { res(dataUrl); }
     };
     img.onerror = function () { res(dataUrl); };
     img.src = dataUrl;
@@ -199,19 +302,35 @@ function galleryEntries() {
   return out;
 }
 
+/* Gegner-Logos liegen offen in logos/ — fremde Vereinswappen sind nicht
+   privat, ein Passwort wäre nur Reibung. Neues Logo: Datei ablegen und eine
+   Zeile in logos/manifest.json ergänzen. */
+function logoEntries() {
+  return logos.map(function (l) { return { ref: l.file, name: l.name || l.file, thumb: l.file }; });
+}
+
 /* ---------- Zustand ---------- */
-var state = { occasion: null, format: null, design: null, values: {}, occValues: {}, photos: {}, photoNames: {}, crops: {} };
+var state = { dept: null, occasion: null, format: null, design: null, values: {}, occValues: {}, deptValues: {}, photos: {}, photoNames: {}, crops: {} };
 
 try {
   var saved = JSON.parse(localStorage.getItem(STORE) || '{}');
   if (saved.values) state.values = saved.values;
   if (saved.occValues) state.occValues = saved.occValues;
+  if (saved.deptValues) state.deptValues = saved.deptValues;
   if (saved.photos) state.photos = saved.photos;
   if (saved.photoNames) state.photoNames = saved.photoNames;
   if (saved.crops) state.crops = saved.crops;
+  /* Früher gab es einen Bildplatz pro Anlass (Schlüssel = Anlass).
+     Jetzt sind es benannte Plätze — alte Auswahl wandert aufs Hauptfoto. */
+  [state.photos, state.photoNames, state.crops].forEach(function (map) {
+    Object.keys(map).forEach(function (k) {
+      if (k.indexOf('::') < 0) { map[pkey(k, 'haupt')] = map[k]; delete map[k]; }
+    });
+  });
   state.occasion = saved.occasion || null;
   state.format = saved.format || null;
   state.design = saved.design || null;
+  state.dept = saved.dept || (state.occasion ? deptOf(state.occasion) : null);
 } catch (e) {}
 
 function persist() {
@@ -221,8 +340,8 @@ function persist() {
       if (String(state.photos[k]).indexOf('data:') !== 0) photos[k] = state.photos[k];
     });
     localStorage.setItem(STORE, JSON.stringify({
-      values: state.values, occValues: state.occValues,
-      occasion: state.occasion, format: state.format, design: state.design,
+      values: state.values, occValues: state.occValues, deptValues: state.deptValues,
+      dept: state.dept, occasion: state.occasion, format: state.format, design: state.design,
       photos: photos, photoNames: state.photoNames, crops: state.crops
     }));
   } catch (e) {}
@@ -233,16 +352,33 @@ function valueOf(f, occ) {
     var bag = state.occValues[occ] || {};
     return bag[f.id] != null ? bag[f.id] : ((f.defs && f.defs[occ]) || '');
   }
+  if (f.scope === 'dept') {
+    var dept = deptOf(occ);
+    var dbag = state.deptValues[dept] || {};
+    return dbag[f.id] != null ? dbag[f.id] : ((f.defs && f.defs[dept]) || '');
+  }
   return state.values[f.id] != null ? state.values[f.id] : f.def;
 }
 function setValue(f, occ, val) {
   if (f.scope === 'occasion') {
     if (!state.occValues[occ]) state.occValues[occ] = {};
     state.occValues[occ][f.id] = val;
+  } else if (f.scope === 'dept') {
+    var dept = deptOf(occ);
+    if (!state.deptValues[dept]) state.deptValues[dept] = {};
+    state.deptValues[dept][f.id] = val;
   } else {
     state.values[f.id] = val;
   }
   persist();
+}
+function fieldById(id) {
+  for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].id === id) return FIELDS[i];
+  return null;
+}
+function optionsOf(f, occ) {
+  if (f.optionsByDept) return f.optionsByDept[deptOf(occ)] || [];
+  return f.options || null;
 }
 function resolved(occ) {
   var v = { verein: VEREIN };
@@ -267,21 +403,249 @@ function formatsForDesign(occ, d) {
 }
 
 /* ---------- Zeichnen ---------- */
+/* Torschützen: bis zu zehn Tore. Gleicher Name = eine Zeile mit allen
+   Minuten dahinter, und ab sieben Zeilen läuft die Liste zweispaltig mit
+   kleinerer Schrift — sonst passt ein 7:3 nicht mehr in die Kachel.
+   Ein „G" vor der Zeile (oder „(G)" dahinter) markiert ein Gegentor. */
+function goalGroups(v) {
+  var list = [];
+  for (var i = 1; i <= 10; i++) {
+    var raw = v['tor' + i];
+    if (raw == null) continue;
+    raw = String(raw).trim();
+    if (!raw) continue;
+    var own = true, m;
+    if ((m = raw.match(/^g\s*[:.\-\u00b7]?\s+(.+)$/i))) { own = false; raw = m[1].trim(); }
+    if ((m = raw.match(/^(.*?)\(\s*g\s*\)$/i))) { own = false; raw = m[1].trim(); }
+    var min = '', name = raw;
+    if ((m = raw.match(/^(\d{1,3})\s*['\u2019\u00b4`\u00b7.+-]*\s*(.+)$/)) ) { min = m[1]; name = m[2].trim(); }
+    list.push({ min: min, sort: min === '' ? 999 : parseInt(min, 10), name: name, own: own });
+  }
+  list.sort(function (a, b) { return a.sort - b.sort; });
+  var groups = [], seen = {};
+  list.forEach(function (g) {
+    var key = (g.own ? 'h\u00b7' : 'a\u00b7') + g.name.toLowerCase();
+    if (seen[key]) { seen[key].mins.push(g.min); return; }
+    seen[key] = { name: g.name, own: g.own, mins: [g.min] };
+    groups.push(seen[key]);
+  });
+  return groups;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function layoutGoals(node, v) {
+  var boxes = node.querySelectorAll('[data-goals]');
+  if (!boxes.length) return;
+  var groups = goalGroups(v);
+  var n = groups.length, two = n > 6;
+  var f = two ? 0.76 : (n > 4 ? 0.89 : 1);
+  Array.prototype.forEach.call(boxes, function (box) {
+    var nameSize = Math.round((+box.getAttribute('data-goal-name') || 38) * f);
+    var minSize = Math.round((+box.getAttribute('data-goal-min') || 33) * f);
+    var gap = +box.getAttribute('data-goal-gap') || 13;
+    box.style.gridTemplateColumns = two ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)';
+    box.style.gap = Math.round(gap * (two ? 0.85 : 1)) + 'px ' + (two ? Math.round(gap * 2) + 'px' : '0px');
+    Array.prototype.forEach.call(box.querySelectorAll('[data-goal-row]'), function (row, i) {
+      var g = groups[i];
+      if (!g) { row.style.display = 'none'; return; }
+      row.style.display = 'flex';
+      row.style.columnGap = Math.round(nameSize * 0.42) + 'px';
+      var outer = row.firstElementChild;
+      var inner = row.querySelector('[data-field]');
+      if (!outer || !inner) return;
+      outer.style.fontSize = nameSize + 'px';
+      outer.style.color = g.own ? '#F5F2EE' : 'rgba(245,242,238,0.62)';
+      var mins = g.mins.filter(function (m) { return m !== ''; }).map(function (m) {
+        return '<span style="font-family:\'Archivo Black\',sans-serif; font-size:' + minSize +
+          'px; line-height:1.15; color:' + (g.own ? '#E03131' : 'rgba(245,242,238,0.5)') + ';">' + m + '&#39;</span>';
+      }).join('');
+      inner.innerHTML = escHtml(g.name) +
+        (mins ? '<span style="display:inline-flex; align-items:baseline; gap:' + Math.round(minSize * 0.33) +
+          'px; margin-left:' + Math.round(nameSize * 0.42) + 'px;">' + mins + '</span>' : '');
+    });
+  });
+}
+
 function paintNode(node, occ) {
   var v = resolved(occ);
   Array.prototype.forEach.call(node.querySelectorAll('[data-field]'), function (el) {
     var id = el.getAttribute('data-field');
-    if (v[id] != null && v[id] !== '') el.textContent = v[id];
+    var f = fieldById(id);
+    /* Optionale Felder dürfen leer sein (z. B. das vierte Tor) — dann wird
+       der Platzhalter aus dem Layout entfernt, nicht stehen gelassen. */
+    if (f && f.optional) el.textContent = v[id] || '';
+    else if (v[id] != null && v[id] !== '') el.textContent = v[id];
   });
+  /* Ganze Zeilen ausblenden, wenn ihr Feld leer ist. */
+  Array.prototype.forEach.call(node.querySelectorAll('[data-hide-empty]'), function (el) {
+    var id = el.getAttribute('data-hide-empty');
+    el.style.display = (v[id] != null && String(v[id]).trim() !== '') ? '' : 'none';
+  });
+  layoutGoals(node, v);
   var color = OUTCOME_COLORS[v.ausgang] || '#2B2B30';
   Array.prototype.forEach.call(node.querySelectorAll('[data-outcome-bg]'), function (el) { el.style.background = color; });
-  var ref = state.photos[occ];
-  var shown = ref ? (IMG_CACHE_READY[ref] || BLANK) : BLANK;
   Array.prototype.forEach.call(node.querySelectorAll('[data-photo]'), function (img) {
+    var slot = slotId(img), pk = pkey(occ, slot);
+    var empty = slotMeta(slot).kind === 'logo' ? BLANK_LOGO : BLANK;
+    var ref = state.photos[pk];
+    var shown = ref ? (IMG_CACHE_READY[ref] || empty) : empty;
     if (img.getAttribute('src') !== shown) img.src = shown;
-    bindCropDrag(img, occ);
-    applyCrop(img, occ);
+    if (slotMeta(slot).kind === 'logo') {
+      /* Logos werden nicht zugeschnitten: ganz zeigen, nichts ziehen. */
+      img.style.objectFit = 'contain';
+      img.style.transform = 'none';
+      img.style.pointerEvents = 'none';
+      return;
+    }
+    bindCropDrag(img, pk);
+    applyCrop(img, pk);
   });
+  /* Kürzel im Wappenkreis mitskalieren: die Layouts sind auf drei Zeichen
+     gesetzt, vier müssen ebenso hineinpassen. */
+  Array.prototype.forEach.call(node.querySelectorAll('[data-field="gegnerKuerzel"]'), function (el) {
+    var host = el.parentElement;
+    if (!host) return;
+    if (!host.getAttribute('data-fs-base')) {
+      host.setAttribute('data-fs-base', String(parseFloat(getComputedStyle(host).fontSize) || 0));
+    }
+    var base = parseFloat(host.getAttribute('data-fs-base'));
+    var len = (el.textContent || '').length;
+    if (base) host.style.fontSize = Math.round(base * Math.min(1, 3 / Math.max(1, len))) + 'px';
+  });
+
+  /* Ersatzwappen nur zeigen, solange kein Gegner-Logo gewählt ist.
+     Über visibility statt display, damit das im Layout gesetzte
+     display (flex, grid, …) unangetastet bleibt. */
+  Array.prototype.forEach.call(node.querySelectorAll('[data-logo-fallback]'), function (el) {
+    var has = !!state.photos[pkey(occ, el.getAttribute('data-logo-fallback') || 'gegner')];
+    el.style.visibility = has ? 'hidden' : 'visible';
+  });
+  applyDecor(node);
+}
+
+/* ---------- Tischtennis-Objekt im Hintergrund ----------
+   Schläger-Silhouette: Game Icons (CC BY 3.0, Delapouite) — Namensnennung
+   steht in README.md und github.md.
+   Der Platz wird pro Layout gemessen: belegt ist alles, was gemalt wird oder
+   Text trägt. Passt in kein freies Band ein Objekt, bleibt die Fläche leer. */
+var GAME_BAT = 'M323.438 21.28c-1.136-.002-2.276.004-3.407.032-5.167.13-10.286.566-15.342 1.313-40.45 5.973-78.013 31.68-108.5 65.5-30.488 33.82-53.72 75.57-65.688 111.563-5.985 17.996-9.117 34.56-9.22 47.593-.1 13.034 2.973 21.942 7.282 26.25L238.438 383.44c4.31 4.31 13.25 7.383 26.282 7.28 11.386-.088 25.464-2.49 40.842-7.093 1.27-18.692 9.452-36.646 22.875-49.906 14.647-14.47 34.892-22.75 55.563-22.75 12.415 0 24.67 3.01 35.656 8.53 1.406-1.22 2.808-2.443 4.188-3.688 33.82-30.487 59.558-68.05 65.53-108.5 5.974-40.45-6.884-84.572-53.5-131.187C396.362 36.61 358.65 21.37 323.438 21.28zM135.375 305.814c.336 28.81-13.204 52.198-32.063 71.75-23.56 24.425-54.908 45.003-80.78 69.843 5.21 17.185 8.287 25.638 12.374 29.78 4.09 4.146 12.346 7.215 29.594 12.283 24.656-25.833 44.44-57.94 68.5-82 12.625-12.627 26.7-23.098 43.594-28.408 8.804-2.766 18.313-3.977 28.5-3.53l-69.72-69.72zM384 328.969c-15.79 0-31.774 6.565-42.906 17.56-11.132 10.998-17.724 26.717-17.72 42.22.006 15.497 6.59 31.23 17.72 42.22 11.13 10.988 27.12 17.53 42.906 17.53 15.785 0 31.775-6.542 42.906-17.53 11.13-10.99 17.714-26.723 17.72-42.22.004-15.503-6.588-31.222-17.72-42.22-11.132-10.995-27.115-17.56-42.906-17.56z';
+
+function batUrl(color) {
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="' +
+    color + '" d="' + GAME_BAT + '"/></svg>');
+}
+
+/* Füllt ein Foto die ganze Fläche? Dann kein Dekor — zwei Bilder würden um
+   dieselbe Fläche konkurrieren. */
+function photoFills(node, w, h) {
+  var fills = false;
+  Array.prototype.forEach.call(node.querySelectorAll('[data-photo]'), function (img) {
+    var box = img.parentElement || img;
+    if (box.offsetWidth * box.offsetHeight > w * h * 0.75) fills = true;
+  });
+  return fills;
+}
+
+function decorBands(node, w, h, x0, x1) {
+  var br = node.getBoundingClientRect();
+  if (!br.height) return [];
+  var sc = br.height / h;
+  var occ = [];
+  function add(el, pad) {
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    if (r.height < 1) return;
+    /* Nur was in die betrachtete Spalte hineinreicht, blockiert sie. */
+    var left = (r.left - br.left) / sc, right = (r.right - br.left) / sc;
+    if (right <= x0 || left >= x1) return;
+    occ.push({ top: (r.top - br.top) / sc - pad, bottom: (r.bottom - br.top) / sc + pad });
+  }
+  Array.prototype.forEach.call(node.querySelectorAll('[data-photo]'), function (im) {
+    add(im.parentElement || im, 10);
+  });
+  add(node.querySelector('[data-footer]'), 10);
+  Array.prototype.forEach.call(node.querySelectorAll('*'), function (el) {
+    if (el.hasAttribute('data-tt-decor') || el.closest('[data-tt-decor]')) return;
+    var txt = (el.textContent || '').trim();
+    var leaf = txt && !Array.prototype.some.call(el.children, function (c) {
+      return (c.textContent || '').trim();
+    });
+    var cs = getComputedStyle(el);
+    var paints = cs.backgroundImage !== 'none' ||
+      (cs.backgroundColor && !/rgba\([^)]*,\s*0\)/.test(cs.backgroundColor) && cs.backgroundColor !== 'transparent');
+    if (leaf || paints) add(el, 14);
+  });
+
+  var step = 6, bands = [], cur = null;
+  for (var y = 0; y < h; y += step) {
+    var hit = occ.some(function (o) { return y >= o.top && y < o.bottom; });
+    if (hit) { if (cur) { bands.push(cur); cur = null; } }
+    else if (cur) cur.bottom = y + step;
+    else cur = { top: y, bottom: y + step };
+  }
+  if (cur) bands.push(cur);
+  return bands.sort(function (a, b) { return (b.bottom - b.top) - (a.bottom - a.top); });
+}
+
+function applyDecor(node) {
+  var w = node.offsetWidth, h = node.offsetHeight;
+  if (!w || !h) return;
+  var old = node.querySelector('[data-tt-decor]');
+  if (old) old.parentNode.removeChild(old);
+  /* Designs mit eigenem Grafikmotiv (z. B. das Fußball-Spielfeld) bringen
+     ihren Hintergrund selbst mit — dort kein Tischtennis-Schläger. */
+  if (node.hasAttribute('data-no-decor')) return;
+  if (photoFills(node, w, h)) return;
+
+  var bg = (node.getAttribute('style') || '');
+  var light = /#F5F2EE|#EFEDEA/i.test(bg);
+  var ink = light ? 'rgba(20,19,24,0.1)' : 'rgba(245,242,238,0.085)';
+  var strong = light ? 'rgba(20,19,24,0.2)' : 'rgba(245,242,238,0.18)';
+  var s = w / 1080;
+
+  /* Drei Spalten prüfen: ganze Breite, linke und rechte Hälfte. In dichten
+     Layouts ist oft nur eine Hälfte frei — wer nur volle Breite messt,
+     findet dort nie Platz und lässt ganze Designs ohne Objekt. */
+  var cols = [
+    { x0: 0, x1: w, w: w },
+    { x0: 0, x1: w * 0.56, w: w * 0.56 },
+    { x0: w * 0.44, x1: w, w: w * 0.56 }
+  ];
+  var best = null;
+  cols.forEach(function (c) {
+    var band = decorBands(node, w, h, c.x0, c.x1)[0];
+    if (!band) return;
+    var bh = band.bottom - band.top;
+    if (!best || bh > best.bh) best = { band: band, col: c, bh: bh };
+  });
+  /* Unter dieser Bandhöhe bliebe nur ein dünner Streifen sichtbar. */
+  if (!best || best.bh < 190 * s) return;
+
+  /* Der Schläger wird groß gesetzt und vom freien Platz beschnitten, statt
+     auf die Bandhöhe zu schrumpfen: ein angeschnittenes Blatt ist als
+     Schläger lesbar, ein 180-px-Objekt war nur ein Fleck.
+     Der Beschnitt umfasst genau die gemessene Spalte — volle Breite würde
+     in die andere Hälfte reichen, wo Text steht. */
+  var cw = best.col.x1 - best.col.x0;
+  var size = Math.min(cw * 1.45, 760 * s);
+  var right = best.col.x0 > 0;
+  var left = right ? cw - size * 0.72 : -size * 0.28;
+  var inner = '<div style="position:absolute; left:' + best.col.x0 + 'px; top:' + best.band.top +
+    'px; width:' + cw + 'px; height:' + best.bh + 'px; overflow:hidden;">' +
+    '<img src="' + batUrl(ink) + '" alt="" style="position:absolute; left:' + left +
+    'px; top:' + ((best.bh - size) / 2) + 'px; width:' + size + 'px; height:' + size +
+    'px; transform:rotate(-14deg); object-fit:contain; display:block;">' +
+    '</div>';
+
+  var layer = document.createElement('div');
+  layer.setAttribute('data-tt-decor', '1');
+  layer.setAttribute('style', 'position:absolute; inset:0; overflow:hidden; pointer-events:none;');
+  layer.innerHTML = inner;
+  node.insertBefore(layer, node.firstChild);
 }
 function paintAll() {
   Object.keys(nodes).forEach(function (k) { paintNode(nodes[k], k.split('|')[1]); });
@@ -490,12 +854,14 @@ function boot() {
     .then(function () {
       return Promise.all([
         fetchJson('photos/manifest.json').catch(function () { return []; }),
-        fetchJson('photos/pack.json').catch(function () { return null; })
+        fetchJson('photos/pack.json').catch(function () { return null; }),
+        fetchJson('logos/manifest.json').catch(function () { return []; })
       ]);
     })
     .then(function (res) {
       gallery = res[0] || [];
       pack = res[1];
+      logos = res[2] || [];
       var pw = null;
       try { pw = localStorage.getItem(PW_STORE); } catch (e) {}
       if (!pack || !pw) return;
@@ -505,6 +871,7 @@ function boot() {
       return Promise.all(Object.keys(state.photos).map(function (k) { return usePhoto(state.photos[k]); }));
     })
     .then(function () {
+      buildDepts();
       buildOccasions();
       paintAll();
       sync();
@@ -519,6 +886,7 @@ function boot() {
 }
 
 /* ---------- Schritte ---------- */
+var deptsBox = document.getElementById('depts');
 var occsBox = document.getElementById('occs');
 var fmtsBox = document.getElementById('fmts');
 var designsBox = document.getElementById('designs');
@@ -528,9 +896,34 @@ var editor = document.getElementById('editor');
 var stageTitle = document.getElementById('stage-title');
 var hintEl = document.getElementById('hint');
 
+function buildDepts() {
+  deptsBox.innerHTML = '';
+  DEPTS.forEach(function (dp) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'seg';
+    btn.setAttribute('data-dept', dp.id);
+    btn.setAttribute('aria-pressed', String(dp.id === state.dept));
+    btn.textContent = dp.label;
+    btn.addEventListener('click', function () { pickDept(dp.id); });
+    deptsBox.appendChild(btn);
+  });
+}
+function pickDept(id) {
+  state.dept = id;
+  var occs = occasionsFor(id);
+  if (!occs.some(function (o) { return o.id === state.occasion; })) {
+    state.occasion = occs.length ? occs[0].id : null;
+    var fmts = formatsFor(state.occasion);
+    if (!fmts.some(function (f) { return f.id === state.format; })) state.format = fmts.length ? fmts[0].id : null;
+    fixDesign();
+  }
+  persist(); sync();
+}
+
 function buildOccasions() {
   occsBox.innerHTML = '';
-  OCCASIONS.forEach(function (o) {
+  occasionsFor(state.dept).forEach(function (o) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'seg';
@@ -542,6 +935,7 @@ function buildOccasions() {
 }
 function pickOccasion(id) {
   state.occasion = id;
+  state.dept = deptOf(id);
   var fmts = formatsFor(id);
   if (!fmts.some(function (f) { return f.id === state.format; })) state.format = fmts.length ? fmts[0].id : null;
   fixDesign();
@@ -617,7 +1011,7 @@ function buildFields() {
   if (!node) return;
   var occ = state.occasion;
 
-  if (node.querySelector('[data-photo]')) fieldsBox.appendChild(photoBlock(occ));
+  if (node.querySelector('[data-photo]')) fieldsBox.appendChild(photoBlocks(occ, node));
 
   var present = {};
   Array.prototype.forEach.call(node.querySelectorAll('[data-field]'), function (el) {
@@ -671,9 +1065,10 @@ function fieldBlock(f, occ) {
     head.appendChild(cnt);
   }
   var input;
-  if (f.options) {
+  var opts = optionsOf(f, occ);
+  if (opts) {
     input = document.createElement('select');
-    f.options.forEach(function (o) {
+    opts.forEach(function (o) {
       var opt = document.createElement('option');
       opt.value = o; opt.textContent = o;
       input.appendChild(opt);
@@ -711,35 +1106,52 @@ function fieldBlock(f, occ) {
     }
   }
   showCount();
-  input.addEventListener(f.options ? 'change' : 'input', function () {
+  input.addEventListener(opts ? 'change' : 'input', function () {
     setValue(f, occ, input.value);
     showCount();
     grow();
     paintAll();
   });
   wrap.appendChild(head); wrap.appendChild(input);
+  if (f.subtitle) {
+    var note = document.createElement('div');
+    note.className = 'f-note';
+    note.textContent = f.subtitle;
+    wrap.appendChild(note);
+  }
   return wrap;
 }
 
-function photoBlock(occ) {
-  zoomUI = null;
+/* Ein Abschnitt pro Bildplatz des gewählten Layouts. */
+function photoBlocks(occ, node) {
+  var box = document.createElement('div');
+  box.style.cssText = 'display:flex;flex-direction:column;gap:18px';
+  slotsIn(node).forEach(function (slot) { box.appendChild(slotBlock(occ, slot)); });
+  return box;
+}
+
+function slotBlock(occ, slot) {
+  var meta = slotMeta(slot);
+  var isLogo = meta.kind === 'logo';
+  var pk = pkey(occ, slot);
+  if (!isLogo) zoomUI = null;
   var wrap = document.createElement('div');
   wrap.className = 'f';
   var lab = document.createElement('label');
-  lab.textContent = 'Foto';
+  lab.textContent = meta.label;
   wrap.appendChild(lab);
 
-  var entries = galleryEntries();
+  var entries = isLogo ? logoEntries() : galleryEntries();
   if (entries.length) {
     var grid = document.createElement('div');
     grid.className = 'gallery';
     var none = document.createElement('button');
     none.type = 'button';
     none.className = 'ph ph-none';
-    none.textContent = 'kein Foto';
-    none.setAttribute('aria-pressed', String(!state.photos[occ]));
+    none.textContent = isLogo ? 'kein Logo' : 'kein Foto';
+    none.setAttribute('aria-pressed', String(!state.photos[pk]));
     none.addEventListener('click', function () {
-      delete state.photos[occ]; delete state.photoNames[occ]; resetCrop(occ);
+      delete state.photos[pk]; delete state.photoNames[pk]; resetCrop(pk);
       persist(); paintAll(); buildFields();
     });
     grid.appendChild(none);
@@ -748,15 +1160,15 @@ function photoBlock(occ) {
       btn.type = 'button';
       btn.className = 'ph';
       btn.title = p.name;
-      btn.setAttribute('aria-pressed', String(state.photos[occ] === p.ref));
+      btn.setAttribute('aria-pressed', String(state.photos[pk] === p.ref));
       var img = document.createElement('img');
       img.src = p.thumb || BLANK;
       img.alt = p.name;
       btn.appendChild(img);
       btn.addEventListener('click', function () {
-        state.photos[occ] = p.ref;
-        state.photoNames[occ] = p.name;
-        resetCrop(occ);
+        state.photos[pk] = p.ref;
+        state.photoNames[pk] = p.name;
+        resetCrop(pk);
         persist();
         usePhoto(p.ref).then(function () { paintAll(); buildFields(); });
       });
@@ -765,12 +1177,13 @@ function photoBlock(occ) {
     wrap.appendChild(grid);
   }
 
-  if (pack && !packKey) wrap.appendChild(unlockBlock());
+  if (!isLogo && pack && !packKey) wrap.appendChild(unlockBlock());
 
   var pick = document.createElement('button');
   pick.type = 'button';
   pick.className = 'pick';
-  pick.innerHTML = 'Eigenes Foto vom Gerät … <em>' + (state.photoNames[occ] || 'kein Foto gewählt') + '</em>';
+  pick.innerHTML = (isLogo ? 'Logo vom Gerät … <em>' : 'Eigenes Foto vom Gerät … <em>') +
+    (state.photoNames[pk] || (isLogo ? 'kein Logo gewählt' : 'kein Foto gewählt')) + '</em>';
   var file = document.createElement('input');
   file.type = 'file'; file.accept = 'image/*'; file.hidden = true;
   pick.addEventListener('click', function () { file.click(); });
@@ -779,16 +1192,16 @@ function photoBlock(occ) {
     if (!f) return;
     var fr = new FileReader();
     fr.onload = function () {
-      state.photos[occ] = fr.result;
-      state.photoNames[occ] = f.name;
-      resetCrop(occ);
+      state.photos[pk] = fr.result;
+      state.photoNames[pk] = f.name;
+      resetCrop(pk);
       persist();
       usePhoto(fr.result).then(function () { paintAll(); buildFields(); });
     };
     fr.readAsDataURL(f);
   });
   wrap.appendChild(pick); wrap.appendChild(file);
-  if (state.photos[occ]) wrap.appendChild(cropBlock(occ));
+  if (!isLogo && state.photos[pk]) wrap.appendChild(cropBlock(pk));
   return wrap;
 }
 
@@ -875,6 +1288,11 @@ function unlockBlock() {
 
 /* ---------- Ansicht ---------- */
 function sync() {
+  Array.prototype.forEach.call(deptsBox.children, function (b) {
+    b.setAttribute('aria-pressed', String(b.getAttribute('data-dept') === state.dept));
+  });
+  if (!state.dept) { occsBox.innerHTML = ''; fmtsBox.innerHTML = ''; designsBox.innerHTML = ''; editor.hidden = true; return; }
+  buildOccasions();
   Array.prototype.forEach.call(occsBox.children, function (b) {
     b.setAttribute('aria-pressed', String(b.getAttribute('data-occasion') === state.occasion));
   });
@@ -911,6 +1329,8 @@ function sync() {
 
   buildFields();
   paintAll();
+  /* Das Dekor braucht Maße: erst jetzt, wo das Layout im Dokument hängt. */
+  applyDecor(node);
 }
 
 /* ---------- Layouts liegen losgelöst im Speicher ----------
@@ -920,6 +1340,8 @@ function attached(node, fn) {
   var slot = document.getElementById('render-slot');
   var home = node.parentNode;
   if (!home) slot.appendChild(node);
+  /* Jetzt hat das Layout Maße — Dekor passend zum aktuellen Inhalt setzen. */
+  applyDecor(node);
   function back() { if (!home && node.parentNode === slot) slot.removeChild(node); }
   var out;
   try { out = fn(); } catch (e) { back(); throw e; }
@@ -966,8 +1388,12 @@ function fileName(occ, fmt) {
 }
 /* Wo sitzt das Foto im Layout? Als Anteil der Layoutkanten, damit die
    Angabe für jede Ausgabegröße gilt. */
-function photoRectRatio(node) {
-  var img = node.querySelector('[data-photo]');
+function photoRectRatio(node, occ) {
+  var img = null;
+  Array.prototype.forEach.call(node.querySelectorAll('[data-photo]'), function (el) {
+    var slot = slotId(el);
+    if (!img && slotMeta(slot).kind === 'foto' && state.photos[pkey(occ, slot)]) img = el;
+  });
   if (!img || !img.parentElement) return null;
   var b = img.parentElement.getBoundingClientRect(), n = node.getBoundingClientRect();
   if (!n.width || !n.height) return null;
@@ -1038,7 +1464,7 @@ function renderFile(occ, fmtId, designId) {
   var bg = nodeBackground(node);
   return FONTS_READY.then(buildFontCSS).then(function (css) {
     return attached(node, function () {
-      var rect = state.photos[occ] ? photoRectRatio(node) : null;
+      var rect = photoRectRatio(node, occ);
       return primeRenderer(node, bg).then(function () {
         return renderPng(node, occ, fmt, css, bg, rect, 0);
       });

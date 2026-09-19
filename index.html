@@ -3,35 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SVH Media Generator</title>
+<title>SVH Mediengenerator</title>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
 
 <div class="top">
-  <div class="brand">SV Hohentengen · Tischtennis</div>
-  <h1>Media Generator</h1>
-  <p class="lede">Anlass wählen, Format wählen, Texte und Foto einsetzen, Bild speichern — fertig für Instagram, WhatsApp oder die Pinnwand in der Halle. Am Layout kann nichts verrutschen.</p>
+  <div class="brand">SV Hohentengen · Tischtennis &amp; Fußball</div>
+  <h1>Mediengenerator</h1>
+  <p class="lede">Abteilung und Anlass wählen, Format wählen, Texte und Foto einsetzen, Bild speichern — fertig für Instagram, WhatsApp oder die Pinnwand. Am Layout kann nichts verrutschen.</p>
 </div>
 
 <div class="step">
-  <div class="step-t">1 · Anlass</div>
+  <div class="step-t">1 · Abteilung</div>
+  <div class="segs" id="depts"></div>
+</div>
+
+<div class="step">
+  <div class="step-t">2 · Anlass</div>
   <div class="segs" id="occs"></div>
 </div>
 
 <div class="step">
-  <div class="step-t">2 · Format</div>
+  <div class="step-t">3 · Format</div>
   <div class="segs" id="fmts"></div>
 </div>
 
 <div class="step">
-  <div class="step-t">3 · Design</div>
+  <div class="step-t">4 · Design</div>
   <div class="dirs" id="designs"></div>
 </div>
 
 <div class="editor" id="editor" hidden>
   <div class="panel">
-    <div class="step-t" style="margin:0">4 · Inhalte</div>
+    <div class="step-t" style="margin:0">5 · Inhalte</div>
     <div id="fields"></div>
   </div>
   <div class="stage">

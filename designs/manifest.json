@@ -3,36 +3,56 @@
     "id": "H",
     "name": "Standard",
     "description": "Passt immer: alle Anlässe, alle Formate. Dunkel mit Clubrot.",
-    "file": "designs/H.html"
+    "file": "designs/H.html",
+    "dept": "tt"
   },
   {
     "id": "A",
     "name": "Wappen",
     "description": "Vereinswappen groß im Hintergrund, gedeckte Grauwerte. Ohne Foto. Nur Story.",
-    "file": "designs/A.html"
+    "file": "designs/A.html",
+    "dept": "tt"
   },
   {
     "id": "B",
     "name": "Foto & Rot",
     "description": "Foto oben, Clubrot als Signalfarbe, Ball-Motive. Nur Story.",
-    "file": "designs/B.html"
+    "file": "designs/B.html",
+    "dept": "tt"
   },
   {
     "id": "C",
     "name": "Anzeigetafel",
     "description": "Wie die Tafel in der Halle: dunkles Raster, gerahmte Felder. Nur Story.",
-    "file": "designs/C.html"
+    "file": "designs/C.html",
+    "dept": "tt"
   },
   {
     "id": "D",
     "name": "Hell",
     "description": "Heller Hintergrund, schräge rote Bänder, viel Luft. Alle Anlässe, alle Formate.",
-    "file": "designs/D.html"
+    "file": "designs/D.html",
+    "dept": "tt"
   },
   {
     "id": "E",
     "name": "Vollbild",
     "description": "Foto über die ganze Fläche, Text darauf. Alle Anlässe, alle Formate.",
-    "file": "designs/E.html"
+    "file": "designs/E.html",
+    "dept": "tt"
+  },
+  {
+    "id": "F",
+    "name": "Duell",
+    "file": "designs/F.html",
+    "description": "Hintergrundfoto, beide Wappen mit VS. Heimspiel, Erinnerung, Ergebnis.",
+    "dept": "tt"
+  },
+  {
+    "id": "R",
+    "name": "Rasen",
+    "file": "designs/R.html",
+    "dept": "fb",
+    "description": "Spielfeldlinien, beide Wappen mit VS, Tore und Torschützen. Spieltag, Erinnerung, Ergebnis."
   }
 ]

@@ -42,6 +42,7 @@ h1{font-family:'Archivo Black',sans-serif;font-size:40px;line-height:1.04;margin
 .f-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .cnt{font-family:'Barlow Condensed',sans-serif;font-size:16px;letter-spacing:0.06em;text-transform:uppercase;color:#8e8b96;white-space:nowrap}
 .cnt.warn{color:#E8A33D}
+.f-note{font-size:14px;line-height:1.4;color:#8e8b96}
 .cnt.over{color:#ff6b6b}
 .f input.over,.f textarea.over{border-color:#E03131}
 label{font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:0.1em;text-transform:uppercase;color:#8e8b96}
