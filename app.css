@@ -18,6 +18,10 @@ h1{font-family:'Archivo Black',sans-serif;font-size:40px;line-height:1.04;margin
 .step-t{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:0.16em;text-transform:uppercase;color:#8e8b96;margin-bottom:16px}
 
 .dirs{display:flex;flex-wrap:wrap;gap:16px}
+.dirs-h{flex-basis:100%;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:0.18em;text-transform:uppercase;color:#E03131}
+.arch-t{flex-basis:100%;background:none;border:0;border-top:2px dashed #26252c;margin-top:6px;padding:16px 0 2px;color:#8e8b96;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;letter-spacing:0.16em;text-transform:uppercase;text-align:left;cursor:pointer}
+.arch-t:hover{color:#F5F2EE}
+.dir-a{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.14em;color:#8e8b96;border:1px solid #45434d;padding:1px 6px;vertical-align:middle;margin-left:6px}
 .dir{background:#141318;border:2px solid #26252c;padding:14px;display:flex;gap:14px;align-items:center;cursor:pointer;text-align:left;color:inherit;font:inherit;flex:1 1 300px;min-width:260px;max-width:440px}
 .dir:hover{border-color:#45434d}
 .dir[aria-pressed=true]{border-color:#E03131;background:#1B1B1E}
@@ -30,6 +34,8 @@ h1{font-family:'Archivo Black',sans-serif;font-size:40px;line-height:1.04;margin
 .seg{background:#141318;border:2px solid #26252c;color:#F5F2EE;padding:16px 22px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer}
 .seg:hover{border-color:#45434d}
 .seg[aria-pressed=true]{border-color:#E03131;background:#1B1B1E}
+.seg:disabled{cursor:not-allowed;color:#6f6c77;border-style:dashed}
+.seg:disabled:hover{border-color:#26252c}
 .seg em{display:block;font-family:Barlow,Arial,sans-serif;font-weight:400;font-size:14px;letter-spacing:0.02em;text-transform:none;font-style:normal;color:#8e8b96;margin-top:4px}
 .seg[aria-pressed=true] em{color:#9a97a2}
 
@@ -136,3 +142,4 @@ input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{ou
 .admin code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#F5F2EE;background:#1B1B1E;padding:2px 6px}
 .admin .msg{font-size:16px;color:#8e8b96;min-height:22px}
 @media (max-width:430px){.admin{padding:28px 18px 70px}}
+.grp{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.18em;text-transform:uppercase;color:#E03131;margin:10px 0 -6px;padding-top:14px;border-top:1px solid #26252c}

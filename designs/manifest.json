@@ -1,52 +1,75 @@
 [
   {
+    "id": "S27D",
+    "name": "Dunkel",
+    "season": "2026/27",
+    "description": "Saison-Design 2026/27: dunkler Grund, Saisonleiste rechts. Alle Anlässe, alle Formate, Foto optional.",
+    "file": "designs/saison-2026-27-dunkel.html",
+    "dept": "tt"
+  },
+  {
+    "id": "S27H",
+    "name": "Hell",
+    "season": "2026/27",
+    "description": "Saison-Design 2026/27: heller Grund, Saisonleiste rechts. Alle Anlässe, alle Formate, Foto optional.",
+    "file": "designs/saison-2026-27-hell.html",
+    "dept": "tt"
+  },
+  {
     "id": "H",
     "name": "Standard",
     "description": "Passt immer: alle Anlässe, alle Formate. Dunkel mit Clubrot.",
-    "file": "designs/H.html",
-    "dept": "tt"
+    "file": "designs/archiv/H.html",
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "A",
     "name": "Wappen",
     "description": "Vereinswappen groß im Hintergrund, gedeckte Grauwerte. Ohne Foto. Nur Story.",
-    "file": "designs/A.html",
-    "dept": "tt"
+    "file": "designs/archiv/A.html",
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "B",
     "name": "Foto & Rot",
     "description": "Foto oben, Clubrot als Signalfarbe, Ball-Motive. Nur Story.",
-    "file": "designs/B.html",
-    "dept": "tt"
+    "file": "designs/archiv/B.html",
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "C",
     "name": "Anzeigetafel",
     "description": "Wie die Tafel in der Halle: dunkles Raster, gerahmte Felder. Nur Story.",
-    "file": "designs/C.html",
-    "dept": "tt"
+    "file": "designs/archiv/C.html",
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "D",
     "name": "Hell",
     "description": "Heller Hintergrund, schräge rote Bänder, viel Luft. Alle Anlässe, alle Formate.",
-    "file": "designs/D.html",
-    "dept": "tt"
+    "file": "designs/archiv/D.html",
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "E",
     "name": "Vollbild",
     "description": "Foto über die ganze Fläche, Text darauf. Alle Anlässe, alle Formate.",
-    "file": "designs/E.html",
-    "dept": "tt"
+    "file": "designs/archiv/E.html",
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "F",
     "name": "Duell",
-    "file": "designs/F.html",
+    "file": "designs/archiv/F.html",
     "description": "Hintergrundfoto, beide Wappen mit VS. Heimspiel, Erinnerung, Ergebnis.",
-    "dept": "tt"
+    "dept": "tt",
+    "archiv": true
   },
   {
     "id": "R",

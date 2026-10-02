@@ -14,10 +14,9 @@ app.css / app.js        Oberfläche und Logik
 fotos-verwalten.html    Fotos verschlüsseln und ins Paket legen
 admin.js                Logik dazu
 designs/manifest.json   Liste der Design-Vorlagen
-designs/H.html          Standard-Design: alle Anlässe, alle Formate
-designs/D.html, E.html  Hell und Vollbild: alle Anlässe, alle Formate
-designs/F.html          Duell: Hintergrundfoto + beide Wappen (Spieltags-Anlässe)
-designs/A.html … C.html Story-Sonderdesigns (nur Heimspiel/Erinnerung/Ergebnis)
+designs/saison-2026-27-dunkel.html  Saison-Design 2026/27, dunkel: alle Anlässe, alle Formate
+designs/saison-2026-27-hell.html    Saison-Design 2026/27, hell: alle Anlässe, alle Formate
+designs/archiv/                     frühere Designs (H, A–F), weiter anwählbar unter „Archiv“
 designs/R.html          Rasen: Fußball-Abteilung, Spielfeldlinien statt Foto
 logos/manifest.json     Gegner-Wappen (offen, ohne Passwort)
 photos/pack.json        verschlüsseltes Fotopaket
@@ -47,7 +46,9 @@ und in der Story Wappen, Foto & Rot und Anzeigetafel.
 | Mitglieder werben | `werbung` | Story, 4:5, 1:1, A4 |
 | Vereinsnachricht | `nachricht` | Story, 4:5, 1:1, A4 |
 
-Die Fußballabteilung hat eigene Anlässe (Abteilung **Fußball** ganz oben):
+Die Fußballabteilung hat eigene Anlässe (Abteilung **Fußball** ganz oben).
+**Derzeit deaktiviert:** der Button ist sichtbar, aber nicht anwählbar. Zum
+Freischalten in `app.js` bei `DEPTS` das `disabled: true` entfernen.
 
 | Anlass | Kennung | Formate |
 | --- | --- | --- |
@@ -110,6 +111,37 @@ Für unkritische Bilder (leere Halle, Tisch, Logo-Motive) reicht `photos/manifes
 
 Wer keine Fotos in der Galerie will, nimmt im Generator einfach
 „Eigenes Foto vom Gerät" – das Bild verlässt das Gerät dann nie.
+
+## Saison-Design
+
+Pro Saison gibt es **ein** Design in zwei Varianten (Dunkel / Hell). Erkennungs-
+zeichen ist die schmale Saisonleiste am rechten Rand: Ton in Ton, Schrift
+„Saison 2026/27“ oben, von unten lesbar. Das Foto ist bei Heimspiel, Ergebnis
+und Mitglieder werben optional: ohne Foto verschwindet der Bildkasten
+(`data-photo-box`), beim Ergebnis rückt der Text nach unten
+(`data-bottom-photo` / `data-bottom-nophoto`). Die Erinnerung bleibt in beiden
+Varianten rot, sie ist das Signal-Motiv.
+
+Im Generator stehen die Saison-Designs oben. Frühere Designs sind im Manifest
+mit `"archiv": true` markiert und erscheinen eingeklappt unter
+„Archiv: frühere Designs“. Beim ersten Öffnen nach einem Saisonwechsel stellt
+der Generator einmalig auf das neue Saison-Design um.
+
+### Wochenvorschau
+
+Anlass `wochenvorschau` (nur im Saison-Design, alle vier Formate): Zeitraum
+plus bis zu sechs Spiele mit Mannschaft, Gegner, Tag & Uhrzeit und Heim /
+Auswärts. Steht bei einem Spiel „— kein Spiel —“, verschwindet die Zeile im Bild
+und die übrigen Felder dieses Spiels werden ausgeblendet. Heim = rote Marke,
+Auswärts = nur Rahmen. Felder: `wvZeitraum`, `wvTeam1–6`, `wvGegner1–6`,
+`wvTermin1–6`, `wvOrt1–6`.
+
+### Neue Saison anlegen (z. B. 2027/28)
+
+1. Neue Dateien `designs/saison-2027-28-dunkel.html` / `-hell.html` anlegen.
+2. Im Manifest die bisherigen Saison-Einträge auf `"archiv": true` setzen und
+   ihre Dateien nach `designs/archiv/` verschieben (Pfad anpassen).
+3. Neue Einträge mit `"season": "2027/28"` **oben** ins Manifest.
 
 ## Neue Design-Vorlage
 
