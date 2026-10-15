@@ -611,6 +611,19 @@ function paintNode(node, occ) {
     Array.prototype.forEach.call(node.querySelectorAll('[data-bottom-photo]'), function (el) {
       el.style.bottom = (withPhoto ? el.getAttribute('data-bottom-photo') : el.getAttribute('data-bottom-nophoto')) + 'px';
     });
+    /* Ohne Foto rückt der Inhalt unter dem Kopf geschlossen nach unten.
+       space-between würde den frei gewordenen Platz auf zwei mittlere
+       Lücken verteilen — zu klein für Schläger und Ball. So entsteht eine
+       große freie Fläche unter dem Kopf. */
+    Array.prototype.forEach.call(node.querySelectorAll('[data-stage] div'), function (el) {
+      var mark = el.getAttribute('data-spread');
+      if (!mark) {
+        if (el.style.justifyContent !== 'space-between' || el.style.flexDirection !== 'column' || el.children.length < 3) return;
+        el.setAttribute('data-spread', '1');
+      }
+      el.style.justifyContent = withPhoto ? 'space-between' : 'flex-start';
+      el.children[1].style.marginTop = withPhoto ? '' : 'auto';
+    });
   }
   Array.prototype.forEach.call(node.querySelectorAll('[data-logo-fallback]'), function (el) {
     var has = !!state.photos[pkey(occ, el.getAttribute('data-logo-fallback') || 'gegner')];
@@ -717,24 +730,19 @@ function applyDecor(node) {
     var bh = band.bottom - band.top;
     if (!best || bh > best.bh) best = { band: band, col: c, bh: bh };
   });
-  /* Unter dieser Bandhöhe bliebe nur ein dünner Streifen sichtbar. */
-  if (!best || best.bh < 190 * s) return;
-
-  /* Der Schläger wird groß gesetzt und vom freien Platz beschnitten, statt
-     auf die Bandhöhe zu schrumpfen: ein angeschnittenes Blatt ist als
-     Schläger lesbar, ein 180-px-Objekt war nur ein Fleck.
-     Der Beschnitt umfasst genau die gemessene Spalte — volle Breite würde
-     in die andere Hälfte reichen, wo Text steht. */
+  /* Schläger und Ball stehen vollständig im freien Feld, nichts wird
+     angeschnitten. Gedreht braucht das Motiv ~1,21× seiner Kantenlänge,
+     daher die Teilung; reicht der Platz nicht für ein lesbares Motiv,
+     bleibt die Fläche lieber leer. */
+  if (!best) return;
   var cw = best.col.x1 - best.col.x0;
-  var size = Math.min(cw * 1.45, 760 * s);
-  var right = best.col.x0 > 0;
-  var left = right ? cw - size * 0.72 : -size * 0.28;
-  var inner = '<div style="position:absolute; left:' + best.col.x0 + 'px; top:' + best.band.top +
-    'px; width:' + cw + 'px; height:' + best.bh + 'px; overflow:hidden;">' +
-    '<img src="' + batUrl(ink) + '" alt="" style="position:absolute; left:' + left +
-    'px; top:' + ((best.bh - size) / 2) + 'px; width:' + size + 'px; height:' + size +
-    'px; transform:rotate(-14deg); object-fit:contain; display:block;">' +
-    '</div>';
+  var size = Math.min(best.bh / 1.21, cw / 1.21, 720 * s) * 0.92;
+  if (size < 200 * s) return;
+  var left = best.col.x0 + (cw - size) / 2;
+  var top = best.band.top + (best.bh - size) / 2;
+  var inner = '<img src="' + batUrl(ink) + '" alt="" style="position:absolute; left:' + left +
+    'px; top:' + top + 'px; width:' + size + 'px; height:' + size +
+    'px; transform:rotate(-14deg); object-fit:contain; display:block;">';
 
   var layer = document.createElement('div');
   layer.setAttribute('data-tt-decor', '1');
@@ -945,7 +953,27 @@ function loadDesign(d) {
 
 function boot() {
   fetchJson('designs/manifest.json')
-    .then(function (list) { designs = list; return Promise.all(list.map(loadDesign)); })
+    .then(function (list) {
+      /* Fehlt eine einzelne Design-Datei, wird nur dieses Design übersprungen
+         statt den ganzen Generator lahmzulegen. */
+      var missing = [];
+      return Promise.all(list.map(function (d) {
+        return loadDesign(d).then(function () { return d; }, function (e) {
+          missing.push(d.file);
+          if (window.console) console.warn('Design übersprungen:', e.message);
+          return null;
+        });
+      })).then(function (res) {
+        designs = res.filter(Boolean);
+        if (!designs.length) throw new Error('keine Design-Datei gefunden: ' + missing.join(', '));
+        if (missing.length) {
+          var note = document.createElement('div');
+          note.className = 'err';
+          note.textContent = 'Hinweis: ' + missing.join(', ') + ' fehlt auf dem Server – dieses Design ist ausgeblendet.';
+          document.body.insertBefore(note, document.body.firstChild);
+        }
+      });
+    })
     .then(function () {
       /* Neue Saison: einmalig auf das aktuelle Saison-Design umstellen.
          Wer danach bewusst ein Archiv-Design wählt, behält es. */
