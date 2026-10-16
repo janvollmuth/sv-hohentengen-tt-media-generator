@@ -98,6 +98,10 @@ var FIELDS = [
   { id: 'zeiten', label: 'Trainingszeiten', def: 'Di & Do 19:00 Uhr · Mehrzweckhalle', max: 44 },
   { id: 'kontakt', label: 'Kontakt', scope: 'dept', max: 38,
     defs: { tt: 'tischtennis@sv-hohentengen.de', fb: 'fussball@sv-hohentengen.de' } },
+  /* Instagram-Account: bei Mitglieder werben als eigene Zeile, im Aushang (A4)
+     und in der Wochenvorschau unten in der Saisonleiste. Leer = ausgeblendet. */
+  { id: 'insta', label: 'Instagram-Account', scope: 'dept', optional: true, max: 28,
+    defs: { tt: '@svhohentengen1948.tt', fb: '' } },
   { id: 'zusatz', label: 'Zusätzlicher Text', scope: 'occasion', textarea: true, max: 70, defs: {
       ankuendigung: 'Kommt vorbei!',
       erinnerung: 'Wir brauchen euch — kommt vorbei!',
@@ -159,7 +163,7 @@ var FIELDS = [
     } }
 ];
 
-var OUTCOME_COLORS = { 'Sieg': '#2f9e44', 'Niederlage': '#2B2B30', 'Unentschieden': '#E8A33D' };
+var OUTCOME_COLORS = { 'Sieg': '#2f9e44', 'Niederlage': '#2d2d2d', 'Unentschieden': '#E8A33D' };
 var VEREIN = 'SV Hohentengen';
 var STORE = 'svh-media-generator-v1';
 var FRAME_W = 346, FRAME_H = 615;
@@ -556,7 +560,10 @@ function paintNode(node, occ) {
   /* Ganze Zeilen ausblenden, wenn ihr Feld leer ist. */
   Array.prototype.forEach.call(node.querySelectorAll('[data-hide-empty]'), function (el) {
     var id = el.getAttribute('data-hide-empty');
-    el.style.display = (v[id] != null && String(v[id]).trim() !== '') ? '' : 'none';
+    /* Das im Layout gesetzte display (flex, grid …) merken und beim
+       Wiedereinblenden zurückgeben — sonst fällt die Zeile auf block. */
+    if (!el.hasAttribute('data-display')) el.setAttribute('data-display', el.style.display === 'none' ? '' : el.style.display);
+    el.style.display = (v[id] != null && String(v[id]).trim() !== '') ? el.getAttribute('data-display') : 'none';
   });
   layoutGoals(node, v);
   layoutWeek(node, v);
@@ -564,10 +571,10 @@ function paintNode(node, occ) {
   Array.prototype.forEach.call(node.querySelectorAll('[data-ort]'), function (el) {
     var away = /ausw/i.test(String(v[el.getAttribute('data-ort')] || ''));
     el.style.background = away ? 'transparent' : '#E03131';
-    el.style.borderColor = away ? (el.getAttribute('data-line') || '#8e8b96') : '#E03131';
+    el.style.borderColor = away ? (el.getAttribute('data-line') || '#909090') : '#E03131';
     el.style.color = away ? (el.getAttribute('data-ink') || '#F5F2EE') : '#fff';
   });
-  var color = OUTCOME_COLORS[v.ausgang] || '#2B2B30';
+  var color = OUTCOME_COLORS[v.ausgang] || '#2d2d2d';
   Array.prototype.forEach.call(node.querySelectorAll('[data-outcome-bg]'), function (el) { el.style.background = color; });
   Array.prototype.forEach.call(node.querySelectorAll('[data-photo]'), function (img) {
     var slot = slotId(img), pk = pkey(occ, slot);
@@ -610,19 +617,6 @@ function paintNode(node, occ) {
     });
     Array.prototype.forEach.call(node.querySelectorAll('[data-bottom-photo]'), function (el) {
       el.style.bottom = (withPhoto ? el.getAttribute('data-bottom-photo') : el.getAttribute('data-bottom-nophoto')) + 'px';
-    });
-    /* Ohne Foto rückt der Inhalt unter dem Kopf geschlossen nach unten.
-       space-between würde den frei gewordenen Platz auf zwei mittlere
-       Lücken verteilen — zu klein für Schläger und Ball. So entsteht eine
-       große freie Fläche unter dem Kopf. */
-    Array.prototype.forEach.call(node.querySelectorAll('[data-stage] div'), function (el) {
-      var mark = el.getAttribute('data-spread');
-      if (!mark) {
-        if (el.style.justifyContent !== 'space-between' || el.style.flexDirection !== 'column' || el.children.length < 3) return;
-        el.setAttribute('data-spread', '1');
-      }
-      el.style.justifyContent = withPhoto ? 'space-between' : 'flex-start';
-      el.children[1].style.marginTop = withPhoto ? '' : 'auto';
     });
   }
   Array.prototype.forEach.call(node.querySelectorAll('[data-logo-fallback]'), function (el) {
@@ -705,12 +699,14 @@ function applyDecor(node) {
   /* Designs mit eigenem Grafikmotiv (z. B. das Fußball-Spielfeld) bringen
      ihren Hintergrund selbst mit — dort kein Tischtennis-Schläger. */
   if (node.hasAttribute('data-no-decor')) return;
+  /* Saison-Designs kommen ohne Dekor aus (Leiste + Typo reichen). */
+  if (node.hasAttribute('data-season')) return;
   if (photoFills(node, w, h)) return;
 
   var bg = (node.getAttribute('style') || '');
   var light = /#F5F2EE|#EFEDEA/i.test(bg);
-  var ink = light ? 'rgba(20,19,24,0.1)' : 'rgba(245,242,238,0.085)';
-  var strong = light ? 'rgba(20,19,24,0.2)' : 'rgba(245,242,238,0.18)';
+  var ink = light ? 'rgba(21,21,21,0.1)' : 'rgba(245,242,238,0.085)';
+  var strong = light ? 'rgba(21,21,21,0.2)' : 'rgba(245,242,238,0.18)';
   var s = w / 1080;
 
   /* Drei Spalten prüfen: ganze Breite, linke und rechte Hälfte. In dichten
@@ -1536,7 +1532,7 @@ function nodeBackground(node) {
   if (m) return m[1].trim();
   var live = getComputedStyle(node).backgroundColor;
   if (live && live !== 'transparent' && live !== 'rgba(0, 0, 0, 0)') return live;
-  return '#141318';
+  return '#151515';
 }
 
 /* Vorschaubilder der Designs: einmal erzeugt, dann gecacht. */
