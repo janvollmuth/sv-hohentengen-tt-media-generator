@@ -55,8 +55,12 @@ label{font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:0.
 input[type=date],input[type=time],input[type=datetime-local],input[type=text],input[type=password],textarea,select{width:100%;background:#1c1c1c;color:#F5F2EE;border:2px solid #363636;padding:12px 14px;font:500 17px Barlow,Arial,sans-serif}
 textarea{min-height:82px;resize:none;overflow:hidden;line-height:1.4}
 input[type=date]:focus,input[type=time]:focus,input[type=datetime-local]:focus,input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{outline:none;border-color:#E03131}
-.row2{display:flex;gap:14px;align-items:flex-end}
-.row2>.f{flex:1 1 0;min-width:0}
+/* Paare nebeneinander, solange beide Felder Platz haben – auf schmalen
+   Handys untereinander. Native Datums-/Zeitfelder (v. a. iOS) haben eine
+   feste Eigenbreite und würden sonst über das Nachbarfeld ragen. */
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:18px 14px;align-items:start}
+.row2>.f{min-width:0}
+.f{min-width:0}
 
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
 .ph{padding:0;border:2px solid #363636;background:#1c1c1c;cursor:pointer;aspect-ratio:9/16;overflow:hidden}
@@ -143,7 +147,9 @@ input[type=date]:focus,input[type=time]:focus,input[type=datetime-local]:focus,i
 .admin .msg{font-size:16px;color:#909090;min-height:22px}
 @media (max-width:430px){.admin{padding:28px 18px 70px}}
 .grp{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.18em;text-transform:uppercase;color:#E03131;margin:10px 0 -6px;padding-top:14px;border-top:1px solid #282828}
-input[type=date],input[type=time],input[type=datetime-local]{color-scheme:dark;min-height:50px;box-sizing:border-box;cursor:pointer}
+input[type=date],input[type=time],input[type=datetime-local]{color-scheme:dark;min-height:50px;box-sizing:border-box;cursor:pointer;display:block;width:100%;max-width:100%;min-width:0;-webkit-appearance:none;appearance:none;text-align:left;line-height:1.4}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value,input[type=datetime-local]::-webkit-date-and-time-value{text-align:left;margin:0;min-height:1.4em}
+input[type=text],input[type=password],textarea,select{box-sizing:border-box;max-width:100%;min-width:0}
 input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator,input[type=datetime-local]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:0.8}
 .f-check{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.08em;text-transform:uppercase;color:#909090}
 .f-check.warn{color:#ff6b6b}
