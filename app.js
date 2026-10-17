@@ -46,6 +46,49 @@ var FORMATS = [
 /* Feldregister: Beschriftung, Reihenfolge, Standardwert.
    scope 'occasion' = Wert gilt nur für diesen Anlass.
    computed = kein Eingabefeld, wird aus anderen Feldern gebildet. */
+/* ---------- Datum & Uhrzeit ----------
+   Felder mit picker werden über die Datums-/Zeitauswahl des Geräts befüllt.
+   Gespeichert wird der Rohwert (2026-10-17, 19:30, 2026-10-17T19:30), ins
+   Bild kommt die deutsche Schreibweise. Tippfehler wie „So, 26.09.“ an einem
+   Samstag sind damit ausgeschlossen. Alte Freitext-Werte bleiben lesbar. */
+var WTAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function isoDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function parseIsoDate(s) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function fmtTag(d) { return WTAGE[d.getDay()] + ', ' + pad2(d.getDate()) + '.' + pad2(d.getMonth() + 1) + '.'; }
+function mondayOf(d) { var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return t; }
+function isoWeek(d) {
+  var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  var day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  var y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - y0) / 864e5 + 1) / 7);
+}
+function plusDays(d, n) { var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()); t.setDate(t.getDate() + n); return t; }
+function fmtPicker(f, raw) {
+  raw = raw == null ? '' : String(raw).trim();
+  if (!raw) return '';
+  if (f.picker === 'time') return /^\d{2}:\d{2}/.test(raw) ? raw.slice(0, 5) : raw;
+  var d = parseIsoDate(raw);
+  if (!d) return raw;
+  if (f.picker === 'date') return fmtTag(d);
+  if (f.picker === 'datetime') { var tm = /T(\d{2}:\d{2})/.exec(raw); return fmtTag(d) + (tm ? ' · ' + tm[1] : ''); }
+  if (f.picker === 'week') {
+    var mo = mondayOf(d), su = plusDays(mo, 6);
+    var range = mo.getMonth() === su.getMonth()
+      ? pad2(mo.getDate()) + '.–' + pad2(su.getDate()) + '.' + pad2(su.getMonth() + 1) + '.'
+      : pad2(mo.getDate()) + '.' + pad2(mo.getMonth() + 1) + '.–' + pad2(su.getDate()) + '.' + pad2(su.getMonth() + 1) + '.';
+    return 'KW ' + isoWeek(mo) + ' · ' + range;
+  }
+  return raw;
+}
+var HEUTE = new Date();
+var WOCHE = mondayOf(HEUTE);
+var NAECHSTER_SA = plusDays(HEUTE, (6 - HEUTE.getDay() + 7) % 7);
+
 var FIELDS = [
   /* Eigene Mannschaft: Auswahl statt Freitext, damit die Schreibweise über
      alle Beiträge gleich bleibt. Neue Mannschaft = eine Zeile mehr.
@@ -61,9 +104,9 @@ var FIELDS = [
   { id: 'liga', label: 'Liga', scope: 'dept', max: 30,
     defs: { tt: 'Bezirksklasse Gruppe 2', fb: 'Kreisliga A' } },
   { id: 'spieltag', label: 'Spieltag', def: '7. Spieltag', max: 18 },
-  { id: 'datum', label: 'Datum', def: 'Sa, 26.09.', max: 14 },
-  { id: 'uhrzeit', label: 'Uhrzeit', def: '19:30', short: true, max: 8 },
-  { id: 'anstoss', label: 'Anstoß', def: '15:00', short: true, max: 8 },
+  { id: 'datum', label: 'Datum', picker: 'date', short: true, def: isoDate(NAECHSTER_SA) },
+  { id: 'uhrzeit', label: 'Uhrzeit', picker: 'time', short: true, def: '19:30' },
+  { id: 'anstoss', label: 'Anstoß', picker: 'time', short: true, def: '15:00' },
   { id: 'halle', label: 'Halle', def: 'Mehrzweckhalle, Schulstraße 5', max: 42 },
   { id: 'sportplatz', label: 'Sportplatz', def: 'Sportgelände Hohentengen', max: 42 },
   { id: 'punkteHeim', label: 'Punkte eigene Mannschaft', def: '9', short: true, max: 3 },
@@ -113,30 +156,31 @@ var FIELDS = [
     } },
   /* Wochenvorschau: bis zu sechs Spiele. Ohne Mannschaft verschwindet die
      Zeile im Bild, und die übrigen Felder dieses Spiels werden ausgeblendet. */
-  { id: 'wvZeitraum', label: 'Zeitraum', def: 'KW 41 · 05.–11.10.', max: 28 },
+  { id: 'wvZeitraum', label: 'Woche', picker: 'week', rebuild: true, def: isoDate(WOCHE),
+    subtitle: 'Einen beliebigen Tag der Woche wählen – Kalenderwoche und Zeitraum werden daraus gebildet.' },
   { id: 'wvTeam1', label: 'Mannschaft', group: 'Spiel 1', short: true, optional: true, rebuild: true, def: 'SV Hohentengen', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
   { id: 'wvGegner1', label: 'Gegner', group: 'Spiel 1', short: true, optional: true, dependsOn: 'wvTeam1', def: 'TTC Musterstadt', max: 26 },
-  { id: 'wvTermin1', label: 'Tag & Uhrzeit', group: 'Spiel 1', short: true, optional: true, dependsOn: 'wvTeam1', def: 'Sa, 10.10. · 19:30', max: 20 },
+  { id: 'wvTermin1', label: 'Tag & Uhrzeit', group: 'Spiel 1', short: true, optional: true, dependsOn: 'wvTeam1', picker: 'datetime', inWeek: 'wvZeitraum', def: isoDate(plusDays(WOCHE, 5)) + 'T19:30' },
   { id: 'wvOrt1', label: 'Ort', group: 'Spiel 1', short: true, dependsOn: 'wvTeam1', def: 'Heim', options: ['Heim', 'Auswärts'] },
   { id: 'wvTeam2', label: 'Mannschaft', group: 'Spiel 2', short: true, optional: true, rebuild: true, def: 'SV Hohentengen 2', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
   { id: 'wvGegner2', label: 'Gegner', group: 'Spiel 2', short: true, optional: true, dependsOn: 'wvTeam2', def: 'TV Beispielheim', max: 26 },
-  { id: 'wvTermin2', label: 'Tag & Uhrzeit', group: 'Spiel 2', short: true, optional: true, dependsOn: 'wvTeam2', def: 'Fr, 09.10. · 20:00', max: 20 },
+  { id: 'wvTermin2', label: 'Tag & Uhrzeit', group: 'Spiel 2', short: true, optional: true, dependsOn: 'wvTeam2', picker: 'datetime', inWeek: 'wvZeitraum', def: isoDate(plusDays(WOCHE, 4)) + 'T20:00' },
   { id: 'wvOrt2', label: 'Ort', group: 'Spiel 2', short: true, dependsOn: 'wvTeam2', def: 'Auswärts', options: ['Heim', 'Auswärts'] },
   { id: 'wvTeam3', label: 'Mannschaft', group: 'Spiel 3', short: true, optional: true, rebuild: true, def: 'SV Hohentengen U19', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
   { id: 'wvGegner3', label: 'Gegner', group: 'Spiel 3', short: true, optional: true, dependsOn: 'wvTeam3', def: 'SG Nachbarort', max: 26 },
-  { id: 'wvTermin3', label: 'Tag & Uhrzeit', group: 'Spiel 3', short: true, optional: true, dependsOn: 'wvTeam3', def: 'Sa, 10.10. · 14:00', max: 20 },
+  { id: 'wvTermin3', label: 'Tag & Uhrzeit', group: 'Spiel 3', short: true, optional: true, dependsOn: 'wvTeam3', picker: 'datetime', inWeek: 'wvZeitraum', def: isoDate(plusDays(WOCHE, 5)) + 'T14:00' },
   { id: 'wvOrt3', label: 'Ort', group: 'Spiel 3', short: true, dependsOn: 'wvTeam3', def: 'Heim', options: ['Heim', 'Auswärts'] },
   { id: 'wvTeam4', label: 'Mannschaft', group: 'Spiel 4', short: true, optional: true, rebuild: true, def: '', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
   { id: 'wvGegner4', label: 'Gegner', group: 'Spiel 4', short: true, optional: true, dependsOn: 'wvTeam4', def: '', max: 26 },
-  { id: 'wvTermin4', label: 'Tag & Uhrzeit', group: 'Spiel 4', short: true, optional: true, dependsOn: 'wvTeam4', def: '', max: 20 },
+  { id: 'wvTermin4', label: 'Tag & Uhrzeit', group: 'Spiel 4', short: true, optional: true, dependsOn: 'wvTeam4', picker: 'datetime', inWeek: 'wvZeitraum', def: '' },
   { id: 'wvOrt4', label: 'Ort', group: 'Spiel 4', short: true, dependsOn: 'wvTeam4', def: 'Heim', options: ['Heim', 'Auswärts'] },
   { id: 'wvTeam5', label: 'Mannschaft', group: 'Spiel 5', short: true, optional: true, rebuild: true, def: '', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
   { id: 'wvGegner5', label: 'Gegner', group: 'Spiel 5', short: true, optional: true, dependsOn: 'wvTeam5', def: '', max: 26 },
-  { id: 'wvTermin5', label: 'Tag & Uhrzeit', group: 'Spiel 5', short: true, optional: true, dependsOn: 'wvTeam5', def: '', max: 20 },
+  { id: 'wvTermin5', label: 'Tag & Uhrzeit', group: 'Spiel 5', short: true, optional: true, dependsOn: 'wvTeam5', picker: 'datetime', inWeek: 'wvZeitraum', def: '' },
   { id: 'wvOrt5', label: 'Ort', group: 'Spiel 5', short: true, dependsOn: 'wvTeam5', def: 'Heim', options: ['Heim', 'Auswärts'] },
   { id: 'wvTeam6', label: 'Mannschaft', group: 'Spiel 6', short: true, optional: true, rebuild: true, def: '', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
   { id: 'wvGegner6', label: 'Gegner', group: 'Spiel 6', short: true, optional: true, dependsOn: 'wvTeam6', def: '', max: 26 },
-  { id: 'wvTermin6', label: 'Tag & Uhrzeit', group: 'Spiel 6', short: true, optional: true, dependsOn: 'wvTeam6', def: '', max: 20 },
+  { id: 'wvTermin6', label: 'Tag & Uhrzeit', group: 'Spiel 6', short: true, optional: true, dependsOn: 'wvTeam6', picker: 'datetime', inWeek: 'wvZeitraum', def: '' },
   { id: 'wvOrt6', label: 'Ort', group: 'Spiel 6', short: true, dependsOn: 'wvTeam6', def: 'Heim', options: ['Heim', 'Auswärts'] },
   { id: 'verpflegung', label: 'Hinweis Bewirtung', def: 'Für Essen und Getränke ist gesorgt!', max: 40 },
   { id: 'hashtags', label: 'Hashtags', scope: 'dept', max: 64,
@@ -426,7 +470,7 @@ function optionsOf(f, occ) {
 }
 function resolved(occ) {
   var v = { verein: VEREIN };
-  FIELDS.forEach(function (f) { if (!f.computed) v[f.id] = valueOf(f, occ); });
+  FIELDS.forEach(function (f) { if (!f.computed) v[f.id] = f.picker ? fmtPicker(f, valueOf(f, occ)) : valueOf(f, occ); });
   FIELDS.forEach(function (f) { if (f.computed) v[f.id] = f.computed(v); });
   return v;
 }
@@ -1235,7 +1279,7 @@ function fieldBlock(f, occ) {
   lab.setAttribute('for', 'in-' + f.id);
   head.appendChild(lab);
   var cnt = null;
-  if (f.max) {
+  if (f.max && !f.picker) {
     cnt = document.createElement('span');
     cnt.className = 'cnt';
     head.appendChild(cnt);
@@ -1249,6 +1293,9 @@ function fieldBlock(f, occ) {
       opt.value = o; opt.textContent = o || '— kein Spiel —';
       input.appendChild(opt);
     });
+  } else if (f.picker) {
+    input = document.createElement('input');
+    input.type = { date: 'date', time: 'time', datetime: 'datetime-local', week: 'date' }[f.picker];
   } else if (f.textarea) {
     input = document.createElement('textarea');
   } else {
@@ -1282,14 +1329,37 @@ function fieldBlock(f, occ) {
     }
   }
   showCount();
+  /* Kontrollzeile unter Datums-/Zeitfeldern: so steht es im Bild. Bei den
+     Spielen der Wochenvorschau zusätzlich ein Hinweis, wenn der Termin nicht
+     in der gewählten Woche liegt. */
+  var check = null;
+  function showCheck() {
+    if (!check) return;
+    var txt = fmtPicker(f, input.value);
+    var warn = '';
+    if (f.inWeek && input.value) {
+      var wf = fieldById(f.inWeek), wd = parseIsoDate(valueOf(wf, occ)), gd = parseIsoDate(input.value);
+      if (wd && gd && isoDate(mondayOf(wd)) !== isoDate(mondayOf(gd))) warn = 'Liegt nicht in ' + fmtPicker(wf, valueOf(wf, occ)).split(' · ')[0];
+    }
+    if (!input.value && !f.optional) warn = 'Bitte auswählen';
+    check.textContent = warn || (txt ? 'Im Bild: ' + txt + (f.picker === 'time' ? ' Uhr' : '') : '');
+    check.className = 'f-check' + (warn ? ' warn' : '');
+  }
+  if (f.picker) {
+    check = document.createElement('div');
+    check.className = 'f-check';
+  }
   input.addEventListener(opts ? 'change' : 'input', function () {
     setValue(f, occ, input.value);
     showCount();
+    showCheck();
     grow();
     paintAll();
     if (f.rebuild) buildFields();
   });
+  if (f.picker) input.addEventListener('change', function () { if (f.rebuild) buildFields(); });
   wrap.appendChild(head); wrap.appendChild(input);
+  if (check) { wrap.appendChild(check); showCheck(); }
   if (f.subtitle) {
     var note = document.createElement('div');
     note.className = 'f-note';

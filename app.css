@@ -52,9 +52,9 @@ h1{font-family:'Archivo Black',sans-serif;font-size:40px;line-height:1.04;margin
 .cnt.over{color:#ff6b6b}
 .f input.over,.f textarea.over{border-color:#E03131}
 label{font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:0.1em;text-transform:uppercase;color:#909090}
-input[type=text],input[type=password],textarea,select{width:100%;background:#1c1c1c;color:#F5F2EE;border:2px solid #363636;padding:12px 14px;font:500 17px Barlow,Arial,sans-serif}
+input[type=date],input[type=time],input[type=datetime-local],input[type=text],input[type=password],textarea,select{width:100%;background:#1c1c1c;color:#F5F2EE;border:2px solid #363636;padding:12px 14px;font:500 17px Barlow,Arial,sans-serif}
 textarea{min-height:82px;resize:none;overflow:hidden;line-height:1.4}
-input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{outline:none;border-color:#E03131}
+input[type=date]:focus,input[type=time]:focus,input[type=datetime-local]:focus,input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{outline:none;border-color:#E03131}
 .row2{display:flex;gap:14px;align-items:flex-end}
 .row2>.f{flex:1 1 0;min-width:0}
 
@@ -143,3 +143,7 @@ input[type=text]:focus,input[type=password]:focus,textarea:focus,select:focus{ou
 .admin .msg{font-size:16px;color:#909090;min-height:22px}
 @media (max-width:430px){.admin{padding:28px 18px 70px}}
 .grp{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.18em;text-transform:uppercase;color:#E03131;margin:10px 0 -6px;padding-top:14px;border-top:1px solid #282828}
+input[type=date],input[type=time],input[type=datetime-local]{color-scheme:dark;min-height:50px;box-sizing:border-box;cursor:pointer}
+input[type=date]::-webkit-calendar-picker-indicator,input[type=time]::-webkit-calendar-picker-indicator,input[type=datetime-local]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:0.8}
+.f-check{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.08em;text-transform:uppercase;color:#909090}
+.f-check.warn{color:#ff6b6b}
