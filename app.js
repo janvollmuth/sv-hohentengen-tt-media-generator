@@ -146,8 +146,9 @@ var FIELDS = [
   { id: 'kontakt', label: 'Kontakt', scope: 'dept', max: 38,
     defs: { tt: 'tischtennis@sv-hohentengen.de', fb: 'fussball@sv-hohentengen.de' } },
   /* Instagram-Account: bei Mitglieder werben als eigene Zeile, im Aushang (A4)
-     und in der Wochenvorschau unten in der Saisonleiste. Leer = ausgeblendet. */
-  { id: 'insta', label: 'Instagram-Account', scope: 'dept', optional: true, max: 28,
+     und in der Wochenvorschau unten in der Saisonleiste. fixed = kein
+     Eingabefeld, immer der hinterlegte Wert. */
+  { id: 'insta', label: 'Instagram-Account', scope: 'dept', fixed: true,
     defs: { tt: '@svhohentengen1948.tt', fb: '' } },
   { id: 'zusatz', label: 'Zusätzlicher Text', scope: 'occasion', textarea: true, max: 70, defs: {
       ankuendigung: 'Kommt vorbei!',
@@ -216,7 +217,7 @@ var FIELDS = [
   { id: 'weHeim6', label: 'Punkte SVH', group: 'Spiel 6', short: true, dependsOn: 'weTeam6', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
   { id: 'weGast6', label: 'Punkte Gegner', group: 'Spiel 6', short: true, dependsOn: 'weTeam6', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
   { id: 'verpflegung', label: 'Hinweis Bewirtung', def: 'Für Essen und Getränke ist gesorgt!', max: 40 },
-  { id: 'hashtags', label: 'Hashtags', scope: 'dept', max: 64,
+  { id: 'hashtags', label: 'Hashtags', scope: 'dept', fixed: true,
     defs: {
       tt: '#1948 | #nurderSVH | #tischtennis | #gemeinsamfürdenSVH',
       fb: '#1948 | #nurderSVH | #fussball | #gemeinsamfürdenSVH'
@@ -508,6 +509,8 @@ function persist() {
 }
 
 function valueOf(f, occ) {
+  /* Feste Werte: gespeicherte Eingaben aus früheren Versionen ignorieren. */
+  if (f.fixed) return f.defs ? (f.defs[deptOf(occ)] || '') : (f.def || '');
   if (f.scope === 'occasion') {
     var bag = state.occValues[occ] || {};
     return bag[f.id] != null ? bag[f.id] : ((f.defs && f.defs[occ]) || '');
@@ -530,7 +533,7 @@ function setValue(f, occ, val) {
   } else {
     state.values[f.id] = val;
   }
-  persist();
+  persistSoon();
 }
 function fieldById(id) {
   for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].id === id) return FIELDS[i];
@@ -888,8 +891,49 @@ function applyDecor(node) {
   layer.innerHTML = inner;
   node.insertBefore(layer, node.firstChild);
 }
+/* Beim Tippen nicht bei jedem Zeichen alle Layouts neu zeichnen:
+   erst wenn ~300 ms Ruhe ist, zuerst das sichtbare Layout, die übrigen
+   (Vorschaubilder, andere Formate) danach häppchenweise im Leerlauf.
+   Tippt man weiter, wird der Rest abgebrochen und neu angesetzt. */
+var paintTimer = null, paintGen = 0, paintDirty = {};
+function schedulePaint(ms) {
+  clearTimeout(paintTimer);
+  paintGen++;
+  paintTimer = setTimeout(paintNow, ms == null ? 300 : ms);
+}
+function paintNow() {
+  clearTimeout(paintTimer); paintTimer = null;
+  var gen = ++paintGen;
+  var cur = key(state.design, state.occasion, state.format);
+  if (nodes[cur]) paintNode(nodes[cur], state.occasion);
+  /* Erst die übrigen Formate des aktuellen Anlasses (für „Alle Formate“),
+     dann der Rest. In Zeitscheiben von ~10 ms, damit Tippen flüssig bleibt. */
+  var all = Object.keys(nodes).filter(function (k) { return k !== cur; });
+  var rest = all.filter(function (k) { return k.split('|')[1] === state.occasion; })
+    .concat(all.filter(function (k) { return k.split('|')[1] !== state.occasion; }));
+  rest.forEach(function (k) { paintDirty[k] = true; });
+  delete paintDirty[cur];
+  (function step() {
+    if (gen !== paintGen) return;
+    var t0 = performance.now();
+    while (rest.length && performance.now() - t0 < 10) {
+      var k = rest.shift();
+      if (paintDirty[k] && nodes[k]) { paintNode(nodes[k], k.split('|')[1]); delete paintDirty[k]; }
+    }
+    if (rest.length) setTimeout(step, 0);
+  })();
+}
+/* Einzelnes Layout vor Export/Vorschaubild auf den aktuellen Stand bringen. */
+function ensurePainted(k) {
+  if (paintDirty[k] && nodes[k]) { paintNode(nodes[k], k.split('|')[1]); delete paintDirty[k]; }
+}
+/* Vor Export/Teilen: ausstehendes Zeichnen sofort nachholen. */
+function flushPaint() {
+  if (paintTimer) { clearTimeout(paintTimer); paintTimer = null; paintGen++; paintAll(); }
+}
 function paintAll() {
   Object.keys(nodes).forEach(function (k) { paintNode(nodes[k], k.split('|')[1]); });
+  paintDirty = {};
 }
 
 /* ---------- Bildausschnitt ----------
@@ -1364,7 +1408,7 @@ function buildFields() {
 
   var pending = null, group = null;
   FIELDS.forEach(function (f) {
-    if (f.computed || !present[f.id]) return;
+    if (f.computed || f.fixed || !present[f.id]) return;
     if (f.dependsOn) {
       var dep = FIELDS.filter(function (g) { return g.id === f.dependsOn; })[0];
       if (dep && !String(valueOf(dep, occ) || '').trim()) return;
@@ -1470,14 +1514,16 @@ function fieldBlock(f, occ) {
     check = document.createElement('div');
     check.className = 'f-check';
   }
+  var typing = !opts && !f.picker;
   input.addEventListener(opts ? 'change' : 'input', function () {
     setValue(f, occ, input.value);
     showCount();
     showCheck();
     grow();
-    paintAll();
+    if (typing) schedulePaint(); else paintNow();
     if (f.rebuild) buildFields();
   });
+  if (typing) input.addEventListener('blur', function () { if (paintTimer) paintNow(); });
   if (f.picker) input.addEventListener('change', function () { if (f.rebuild) buildFields(); });
   wrap.appendChild(head); wrap.appendChild(input);
   if (check) { wrap.appendChild(check); showCheck(); }
@@ -1733,6 +1779,7 @@ function thumbFor(k, fmt) {
   var node = nodes[k];
   if (!node) return Promise.resolve(null);
   var bg = nodeBackground(node);
+  ensurePainted(k);
   thumbCache[k] = FONTS_READY.then(buildFontCSS).then(function (css) {
     return attached(node, function () {
       return window.htmlToImage.toPng(node, {
@@ -1825,7 +1872,9 @@ function primeRenderer(node, bg) {
 }
 
 function renderFile(occ, fmtId, designId) {
+  flushPaint();
   var k = key(designId, occ, fmtId);
+  ensurePainted(k);
   var node = nodes[k];
   var fmt = formatById(fmtId);
   if (!node) return Promise.resolve(null);

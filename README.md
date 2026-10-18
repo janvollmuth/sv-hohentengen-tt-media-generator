@@ -127,6 +127,37 @@ mit `"archiv": true` markiert und erscheinen eingeklappt unter
 „Archiv: frühere Designs“. Beim ersten Öffnen nach einem Saisonwechsel stellt
 der Generator einmalig auf das neue Saison-Design um.
 
+Die Saison-Designs kommen ohne Dekor aus (kein Schläger, kein Wasserzeichen).
+Schläger und Ball erscheinen nur noch in den Archiv-Designs (dort, wo ohne Foto Platz frei bleibt).
+
+### Datum & Uhrzeit
+
+Datum, Uhrzeit, Anstoß, die Woche der Wochenvorschau und die Spieltermine
+werden über die Auswahl des Geräts gesetzt (Kalender / Uhr), nicht getippt.
+Gespeichert wird der Rohwert, ins Bild kommt die deutsche Schreibweise
+(„Sa, 24.10.“, „KW 43 · 19.–25.10.“). Unter jedem Feld steht zur Kontrolle,
+wie es im Bild erscheint; ein Spiel außerhalb der gewählten Woche wird rot
+markiert. Feld-Eigenschaft im Code: `picker: 'date' | 'time' | 'datetime' | 'week'`.
+
+### Ergebnisse der Woche
+
+Anlass `ergebnisse` (nur im Saison-Design, alle vier Formate): Woche plus bis
+zu sechs Spiele mit Mannschaft, Gegner und Punkten. Die Punkte werden aus einer
+Liste gewählt (0–10); Sieg / Remis / Niederlage bildet der Generator selbst.
+„— kein Spiel —“ blendet die Zeile aus, ab fünf Spielen wird enger gesetzt.
+Felder: `weZeitraum`, `weTeam1–6`, `weGegner1–6`, `weHeim1–6`, `weGast1–6`.
+
+### Instagram-Account
+
+Feld `insta` (Standard `@svhohentengen1948.tt`, pro Abteilung). Erscheint bei
+**Mitglieder werben** als eigene Zeile unter Kontakt, im **Aushang A4**
+(Heimspiel, Vereinsnachricht) und in der **Wochenvorschau** unten in der
+Saisonleiste. In Instagram-Stories und Beiträgen zu Spielen bewusst nicht –
+dort ist man schon auf dem Account.
+
+Instagram-Account und Hashtags sind **fest** (`fixed: true`, kein Eingabefeld).
+Ändern nur im Code bei `insta` bzw. `hashtags` in `app.js`.
+
 ### Wochenvorschau
 
 Anlass `wochenvorschau` (nur im Saison-Design, alle vier Formate): Zeitraum
@@ -297,3 +328,15 @@ zehn Zeilen mit `data-goal-row="1"`, `data-hide-empty="torN"` und
 Sie stammen aus dem Design-Board `Instagram Story Template.dc.html` im
 Omelette-Projekt. Änderungen dort werden nach `designs/` übertragen.
 Das Fußball-Design `designs/R.html` kommt genauso aus `Fussball-Design.dc.html`.
+
+## Nach dem Hochladen: Versionsnummer
+
+In `index.html` hängen `app.js` und `app.css` mit `?v=…` (Datum) an. Bei jeder
+Änderung an `app.js` oder `app.css` das Datum erhöhen – sonst zeigen Browser und
+Handys bis zu einigen Stunden noch die alte, zwischengespeicherte Version.
+
+## Exportgröße
+
+Story, 4:5 und 1:1 werden in doppelter Auflösung exportiert (2160 px breit),
+der A4-Aushang in 2480 × 3508 (300 dpi). Fotos werden intern mit bis zu
+2600 px Kantenlänge gehalten (`PHOTO_MAX`).
