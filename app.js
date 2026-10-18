@@ -21,6 +21,7 @@ var OCCASIONS = [
   { id: 'erinnerung', label: 'Erinnerung', dept: 'tt' },
   { id: 'ergebnis', label: 'Ergebnis', dept: 'tt' },
   { id: 'wochenvorschau', label: 'Wochenvorschau', dept: 'tt' },
+  { id: 'ergebnisse', label: 'Ergebnisse der Woche', dept: 'tt' },
   { id: 'portrait', label: 'Spielerporträt', dept: 'tt' },
   { id: 'werbung', label: 'Mitglieder werben', dept: 'tt' },
   { id: 'nachricht', label: 'Vereinsnachricht', dept: 'tt' },
@@ -37,9 +38,12 @@ function occasionsFor(dept) {
 }
 
 var FORMATS = [
-  { id: 'story', label: 'Story & WhatsApp', note: '1080 × 1920', w: 1080, h: 1920, ratio: 1 },
-  { id: 'post45', label: 'Beitrag 4:5', note: '1080 × 1350', w: 1080, h: 1350, ratio: 1 },
-  { id: 'post11', label: 'Beitrag 1:1', note: '1080 × 1080', w: 1080, h: 1080, ratio: 1 },
+  /* ratio 2: Export in doppelter Auflösung. Instagram/WhatsApp rechnen
+     selbst herunter – aus der größeren Vorlage wird Schrift dabei deutlich
+     schärfer als aus 1080 px. */
+  { id: 'story', label: 'Story & WhatsApp', note: '2160 × 3840', w: 1080, h: 1920, ratio: 2 },
+  { id: 'post45', label: 'Beitrag 4:5', note: '2160 × 2700', w: 1080, h: 1350, ratio: 2 },
+  { id: 'post11', label: 'Beitrag 1:1', note: '2160 × 2160', w: 1080, h: 1080, ratio: 2 },
   { id: 'a4', label: 'A4-Aushang', note: 'zum Ausdrucken', w: 1240, h: 1754, ratio: 2 }
 ];
 
@@ -150,6 +154,7 @@ var FIELDS = [
       erinnerung: 'Wir brauchen euch — kommt vorbei!',
       ergebnis: 'Danke für eure Unterstützung!',
       wochenvorschau: 'Drückt uns die Daumen!',
+      ergebnisse: 'Danke für eure Unterstützung!',
       fbSpieltag: 'Kommt vorbei und macht Stimmung!',
       fbErinnerung: 'Kommt vorbei und unterstützt die Mannschaft!',
       fbErgebnis: 'Danke für eure Unterstützung!'
@@ -182,6 +187,34 @@ var FIELDS = [
   { id: 'wvGegner6', label: 'Gegner', group: 'Spiel 6', short: true, optional: true, dependsOn: 'wvTeam6', def: '', max: 26 },
   { id: 'wvTermin6', label: 'Tag & Uhrzeit', group: 'Spiel 6', short: true, optional: true, dependsOn: 'wvTeam6', picker: 'datetime', inWeek: 'wvZeitraum', def: '' },
   { id: 'wvOrt6', label: 'Ort', group: 'Spiel 6', short: true, dependsOn: 'wvTeam6', def: 'Heim', options: ['Heim', 'Auswärts'] },
+  /* Ergebnisse der Woche: bis zu sechs Spiele. Punkte per Auswahl (kein
+     Tippen), Sieg/Remis/Niederlage wird daraus gebildet. */
+  { id: 'weZeitraum', label: 'Woche', picker: 'week', def: isoDate(WOCHE),
+    subtitle: 'Einen beliebigen Tag der Woche wählen – Kalenderwoche und Zeitraum werden daraus gebildet.' },
+  { id: 'weTeam1', label: 'Mannschaft', group: 'Spiel 1', short: true, optional: true, rebuild: true, def: 'SV Hohentengen', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
+  { id: 'weGegner1', label: 'Gegner', group: 'Spiel 1', short: true, optional: true, dependsOn: 'weTeam1', def: 'TTC Musterstadt', max: 26 },
+  { id: 'weHeim1', label: 'Punkte SVH', group: 'Spiel 1', short: true, dependsOn: 'weTeam1', def: '9', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weGast1', label: 'Punkte Gegner', group: 'Spiel 1', short: true, dependsOn: 'weTeam1', def: '5', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weTeam2', label: 'Mannschaft', group: 'Spiel 2', short: true, optional: true, rebuild: true, def: 'SV Hohentengen 2', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
+  { id: 'weGegner2', label: 'Gegner', group: 'Spiel 2', short: true, optional: true, dependsOn: 'weTeam2', def: 'TV Beispielheim', max: 26 },
+  { id: 'weHeim2', label: 'Punkte SVH', group: 'Spiel 2', short: true, dependsOn: 'weTeam2', def: '6', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weGast2', label: 'Punkte Gegner', group: 'Spiel 2', short: true, dependsOn: 'weTeam2', def: '9', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weTeam3', label: 'Mannschaft', group: 'Spiel 3', short: true, optional: true, rebuild: true, def: 'SV Hohentengen U19', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
+  { id: 'weGegner3', label: 'Gegner', group: 'Spiel 3', short: true, optional: true, dependsOn: 'weTeam3', def: 'SG Nachbarort', max: 26 },
+  { id: 'weHeim3', label: 'Punkte SVH', group: 'Spiel 3', short: true, dependsOn: 'weTeam3', def: '5', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weGast3', label: 'Punkte Gegner', group: 'Spiel 3', short: true, dependsOn: 'weTeam3', def: '5', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weTeam4', label: 'Mannschaft', group: 'Spiel 4', short: true, optional: true, rebuild: true, def: '', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
+  { id: 'weGegner4', label: 'Gegner', group: 'Spiel 4', short: true, optional: true, dependsOn: 'weTeam4', def: '', max: 26 },
+  { id: 'weHeim4', label: 'Punkte SVH', group: 'Spiel 4', short: true, dependsOn: 'weTeam4', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weGast4', label: 'Punkte Gegner', group: 'Spiel 4', short: true, dependsOn: 'weTeam4', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weTeam5', label: 'Mannschaft', group: 'Spiel 5', short: true, optional: true, rebuild: true, def: '', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
+  { id: 'weGegner5', label: 'Gegner', group: 'Spiel 5', short: true, optional: true, dependsOn: 'weTeam5', def: '', max: 26 },
+  { id: 'weHeim5', label: 'Punkte SVH', group: 'Spiel 5', short: true, dependsOn: 'weTeam5', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weGast5', label: 'Punkte Gegner', group: 'Spiel 5', short: true, dependsOn: 'weTeam5', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weTeam6', label: 'Mannschaft', group: 'Spiel 6', short: true, optional: true, rebuild: true, def: '', options: ['', 'SV Hohentengen', 'SV Hohentengen 2', 'SV Hohentengen 3', 'SV Hohentengen U19', 'SV Hohentengen U19 2'] },
+  { id: 'weGegner6', label: 'Gegner', group: 'Spiel 6', short: true, optional: true, dependsOn: 'weTeam6', def: '', max: 26 },
+  { id: 'weHeim6', label: 'Punkte SVH', group: 'Spiel 6', short: true, dependsOn: 'weTeam6', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
+  { id: 'weGast6', label: 'Punkte Gegner', group: 'Spiel 6', short: true, dependsOn: 'weTeam6', def: '', options: ['', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], emptyLabel: '–' },
   { id: 'verpflegung', label: 'Hinweis Bewirtung', def: 'Für Essen und Getränke ist gesorgt!', max: 40 },
   { id: 'hashtags', label: 'Hashtags', scope: 'dept', max: 64,
     defs: {
@@ -264,7 +297,8 @@ function buildFontCSS() {
 /* ---------- Bilder ---------- */
 var IMG_CACHE = {};
 var IMG_CACHE_READY = {};
-var PHOTO_MAX = 1600;
+/* Fotos im Bild brauchen bei 2×-Export ~2200 px, mit Zoom mehr. */
+var PHOTO_MAX = 2600;
 
 function inlineImage(url) {
   if (!url || url.indexOf('data:') === 0) return Promise.resolve(url);
@@ -302,11 +336,49 @@ function normalizePhoto(dataUrl) {
       c.height = Math.round(img.height * scale);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       try {
-        res(keepAlpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85));
+        res(keepAlpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.92));
       } catch (e) { res(dataUrl); }
     };
     img.onerror = function () { res(dataUrl); };
     img.src = dataUrl;
+  });
+}
+
+/* Handyfotos haben oft 12–48 Megapixel. In voller Größe muss der Browser
+   bei jeder Verschiebung ein riesiges Bild neu skalieren – das ruckelt.
+   Darum wird beim Hochladen auf die längste Kante `max` verkleinert
+   (2600 px reichen für A4 auch mit Zoom). Drehung aus den Kameradaten
+   wird dabei übernommen; PNG bleibt PNG (Transparenz für Logos). */
+function shrinkPhoto(file, max) {
+  return new Promise(function (resolve) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var k = Math.min(1, max / Math.max(w, h));
+      var keep = k === 1 && file.size < 1.5e6;
+      var c = document.createElement('canvas');
+      c.width = Math.round(w * k); c.height = Math.round(h * k);
+      var x = c.getContext('2d');
+      x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      if (keep) {
+        var fr = new FileReader();
+        fr.onload = function () { resolve(fr.result); };
+        fr.readAsDataURL(file);
+        return;
+      }
+      var png = /png|gif|webp/i.test(file.type);
+      resolve(c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.92));
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      var fr = new FileReader();
+      fr.onload = function () { resolve(fr.result); };
+      fr.readAsDataURL(file);
+    };
+    img.src = url;
   });
 }
 
@@ -561,18 +633,23 @@ function layoutGoals(node, v) {
    Reicht das nicht (lange Namen, zweizeilige Mannschaften), wird nachgemessen
    und schrittweise weiter verkleinert, bis Zusatztext und Fußband frei sind. */
 function layoutWeek(node, v) {
-  var rows = node.querySelectorAll('[data-hide-empty^="wvTeam"]');
+  var rows = node.querySelectorAll('[data-hide-empty^="wvTeam"], [data-hide-empty^="weTeam"]');
   if (!rows.length) return;
   var n = 0;
   Array.prototype.forEach.call(rows, function (r) {
     if (String(v[r.getAttribute('data-hide-empty')] || '').trim()) n++;
   });
+  /* data-min-fs: kleine Schrift (Gegner, Termin, Ausgang) wird nie kleiner
+     als lesbar; data-fs-pow="2": große Schrift (Spielstand) gibt zuerst nach. */
+  var minK = 1;
   function apply(f) {
     Array.prototype.forEach.call(rows, function (r) {
       Array.prototype.forEach.call(r.querySelectorAll('*'), function (el) {
         if (el.style.fontSize) {
           if (!el.getAttribute('data-base-fs')) el.setAttribute('data-base-fs', String(parseFloat(el.style.fontSize)));
-          el.style.fontSize = (parseFloat(el.getAttribute('data-base-fs')) * f).toFixed(1) + 'px';
+          var pw = parseFloat(el.getAttribute('data-fs-pow')) || 1;
+          var mn = (parseFloat(el.getAttribute('data-min-fs')) || 0) * minK;
+          el.style.fontSize = Math.max(mn, parseFloat(el.getAttribute('data-base-fs')) * Math.pow(f, pw)).toFixed(1) + 'px';
         }
         if (el.style.paddingTop && el.style.display === 'grid') {
           if (!el.getAttribute('data-base-pad')) el.setAttribute('data-base-pad', String(parseFloat(el.style.paddingTop)));
@@ -588,6 +665,13 @@ function layoutWeek(node, v) {
   if (box && box.isConnected && box.clientHeight) {
     var guard = 0;
     while (box.scrollHeight > box.clientHeight + 1 && f > 0.5 && guard++ < 12) { f -= 0.04; apply(f); }
+    /* Reicht es immer noch nicht: Zusatztext weglassen, zuletzt die
+       Mindestgrößen leicht lockern. */
+    var extra = node.querySelector('[data-field="zusatz"]');
+    extra = extra && extra.parentElement;
+    if (extra) extra.style.display = '';
+    if (box.scrollHeight > box.clientHeight + 1 && extra) extra.style.display = 'none';
+    if (box.scrollHeight > box.clientHeight + 1) { minK = 0.85; apply(f); }
   }
 }
 
@@ -611,6 +695,20 @@ function paintNode(node, occ) {
   });
   layoutGoals(node, v);
   layoutWeek(node, v);
+  /* Ergebnisse der Woche: Ausgang aus den Punkten. */
+  Array.prototype.forEach.call(node.querySelectorAll('[data-we-outcome]'), function (el) {
+    var n = el.getAttribute('data-we-outcome');
+    var h = parseInt(v['weHeim' + n], 10), g = parseInt(v['weGast' + n], 10);
+    var score = node.querySelector('[data-we-score="' + n + '"]');
+    var known = !isNaN(h) && !isNaN(g);
+    if (score) score.style.visibility = (isNaN(h) && isNaN(g)) ? 'hidden' : 'visible';
+    el.style.visibility = known ? 'visible' : 'hidden';
+    if (!known) return;
+    var k = h > g ? 'Sieg' : (h < g ? 'Niederlage' : 'Unentschieden');
+    el.style.background = OUTCOME_COLORS[k];
+    el.style.color = k === 'Unentschieden' ? '#151515' : '#fff';
+    el.firstChild.textContent = k === 'Unentschieden' ? 'Remis' : k;
+  });
   /* Heim = rote Fläche, Auswärts = nur Rahmen. */
   Array.prototype.forEach.call(node.querySelectorAll('[data-ort]'), function (el) {
     var away = /ausw/i.test(String(v[el.getAttribute('data-ort')] || ''));
@@ -905,7 +1003,7 @@ function bindCropDrag(img, occ) {
     if (pts[e.pointerId]) { pts[e.pointerId].x = e.clientX; pts[e.pointerId].y = e.clientY; }
     if (pinch) {
       var d = dist();
-      if (pinch.d > 8 && d > 8) setZoom(occ, pinch.z * d / pinch.d);
+      if (pinch.d > 8 && d > 8) setZoom(occ, pinch.z * d / pinch.d, true);
       e.preventDefault();
       return;
     }
@@ -927,8 +1025,7 @@ function bindCropDrag(img, occ) {
       oy: Math.max(0, Math.min(100, oy)),
       z: drag.z
     };
-    paintAll();
-    syncZoomUI(occ);
+    repaintCrop(occ);
   });
   function end(e) {
     if (e && e.pointerId != null) delete pts[e.pointerId];
@@ -943,15 +1040,39 @@ function bindCropDrag(img, occ) {
     if (!state.photos[occ]) return;
     e.preventDefault();
     var c = cropOf(occ);
-    setZoom(occ, c.z * (e.deltaY > 0 ? 0.94 : 1.06));
+    setZoom(occ, c.z * (e.deltaY > 0 ? 0.94 : 1.06), true);
   }, { passive: false });
   refresh();
 }
 
-function setZoom(occ, z) {
+/* Während Ziehen/Zoomen nur die Bilder dieses Bildplatzes nachführen –
+   nicht alle Layouts neu zeichnen – und höchstens einmal pro Bildschirm-
+   Frame. Gespeichert wird erst, wenn die Bewegung ruht. */
+var cropFrame = {};
+function repaintCrop(pk) {
+  if (cropFrame[pk]) return;
+  cropFrame[pk] = requestAnimationFrame(function () {
+    cropFrame[pk] = 0;
+    var parts = pk.split('::'), occ = parts[0], slot = parts[1];
+    Object.keys(nodes).forEach(function (k) {
+      if (k.split('|')[1] !== occ) return;
+      Array.prototype.forEach.call(nodes[k].querySelectorAll('[data-photo]'), function (img) {
+        if (slotId(img) === slot) applyCrop(img, pk);
+      });
+    });
+    syncZoomUI(pk);
+  });
+}
+var persistTimer = null;
+function persistSoon() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(persist, 400);
+}
+function setZoom(occ, z, live) {
   var c = cropOf(occ);
   state.crops[occ] = { ox: c.ox, oy: c.oy, z: Math.max(1, Math.min(2.6, z)) };
-  persist(); paintAll(); syncZoomUI(occ);
+  if (live) { repaintCrop(occ); persistSoon(); }
+  else { persist(); paintAll(); syncZoomUI(occ); }
 }
 var zoomUI = null;
 function syncZoomUI(occ) {
@@ -1290,7 +1411,7 @@ function fieldBlock(f, occ) {
     input = document.createElement('select');
     opts.forEach(function (o) {
       var opt = document.createElement('option');
-      opt.value = o; opt.textContent = o || '— kein Spiel —';
+      opt.value = o; opt.textContent = o || f.emptyLabel || '— kein Spiel —';
       input.appendChild(opt);
     });
   } else if (f.picker) {
@@ -1437,15 +1558,15 @@ function slotBlock(occ, slot) {
   file.addEventListener('change', function () {
     var f = file.files && file.files[0];
     if (!f) return;
-    var fr = new FileReader();
-    fr.onload = function () {
-      state.photos[pk] = fr.result;
+    pick.classList.add('busy');
+    shrinkPhoto(f, isLogo ? 1200 : 2600).then(function (url) {
+      pick.classList.remove('busy');
+      state.photos[pk] = url;
       state.photoNames[pk] = f.name;
       resetCrop(pk);
       persist();
-      usePhoto(fr.result).then(function () { paintAll(); buildFields(); });
-    };
-    fr.readAsDataURL(f);
+      usePhoto(url).then(function () { paintAll(); buildFields(); });
+    });
   });
   wrap.appendChild(pick); wrap.appendChild(file);
   if (!isLogo && state.photos[pk]) wrap.appendChild(cropBlock(pk));
