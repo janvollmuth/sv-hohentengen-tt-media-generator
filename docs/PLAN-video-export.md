@@ -159,7 +159,7 @@ In `designs/saison-2026-27-dunkel.html` **und** `-hell.html`, jeweils Blöcke
 | `zusatz`-Text | `slide-up` | 6.8 | 1.2 |
 | danach | Standbild bis 15 s (Foto zoomt weiter) | – | – |
 
-Von Jan freigegebene Referenz für Tempo und Ablauf: die Vorschau-Seite `dev/video-vorschau/index.html` (Tab „Ergebnis“).
+Tempo und Ablauf hat Jan an der damaligen Vorschau-Seite `dev/video-vorschau/` abgenommen (Tab „Ergebnis“); maßgeblich sind seither die Zeiten in dieser Tabelle.
 | Saisonleiste, Fußband, Hintergrund-Deko | statisch (Grundebene) | – | – |
 
 Hinweis: Die Punkte-Spans liegen **in** den Mannschaftszeilen. Wegen der Regel „keine
@@ -209,7 +209,7 @@ Transformation addiert sich zur Eltern-Ebene.
 
 Bei Wochenvorschau und Ergebnissen hängen die Startzeiten von der Zahl der sichtbaren Zeilen ab (1–6). Deshalb braucht es zusätzlich einen **Staffel-Mechanismus**: `data-anim-stagger="0.7"` am Listen-Container. Er verteilt die Startzeiten auf die sichtbaren Kinder, ausgeblendete Zeilen (`data-hide-empty`) werden übersprungen. Delays von Elementen innerhalb einer Zeile gelten relativ zum Zeilenstart. Für den `zusatz`-Text: `data-anim-after="list"` (Start nach Ende der Staffel + eigener Delay).
 
-**Referenz-Umsetzung:** Die Vorschau-Seite `dev/video-vorschau/index.html` (lokal öffnen über `python3 -m http.server`, dann `/dev/video-vorschau/`) spielt alle vier Abläufe mit den echten Saison-Layouts ab, die Animation läuft dort per Web Animations API. Ihr Choreografie-Code (`CHORE` im Script) zeigt genau, welches Element welchen Effekt bekommt, und kann als Vorlage für die `data-anim`-Attribute dienen. Jan hat Tempo und Ablauf dort abgenommen.
+**Referenz-Umsetzung:** Während Phase 1 diente die Seite `dev/video-vorschau/index.html` als Vorlage — sie spielte die vier Abläufe per Web Animations API ab, und Jan hat Tempo und Ablauf dort abgenommen. Am 13.11.2026 ist sie gelöscht worden: Sie trug eingefrorene Kopien der Layouts in sich und wäre mit jeder Design-Änderung weiter auseinandergelaufen. Was sie konnte, kann der Generator selbst („▶ Vorschau“, Abschnitt 5), und die Choreografien stehen in den Abschnitten 4 und 4a sowie in den `data-anim`-Attributen der Designs.
 
 Vor dem Ausrollen auf weitere Formate jeden Anlass als Video an Jan geben (per Teilen-Dialog oder als Datei).
 
@@ -367,8 +367,9 @@ Instagram-Story. Ins Ergebnis-Protokoll als offene Punkte aufnehmen.
 
 - `README.md`: neuer Abschnitt „Video-Export“ mit Attributtabelle (Abschnitt 3), Hinweis auf
   den letzten Frame = PNG und Browser-Voraussetzungen.
-- `HOCHLADEN.md`: geänderte/neue Dateien auflisten (`video.js`, `index.html`, `app.js`,
-  `app.css`, beide Saison-Designs, `README.md`).
+- ~~`HOCHLADEN.md`: geänderte/neue Dateien auflisten.~~ *Entfällt (13.11.2026).* Die Datei
+  stammte aus der Zeit der Web-Uploads; veröffentlicht wird über Git, und welche Dateien sich
+  geändert haben, steht im Commit. Sie ist gelöscht.
 
 ## 9. Phasen
 

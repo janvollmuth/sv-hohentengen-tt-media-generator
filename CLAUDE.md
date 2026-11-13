@@ -8,9 +8,14 @@ Ausführliche Doku zu Aufbau, Designs und Feldern: `README.md`.
 
 ## Aktuelle Aufgabe
 
-Video-Export (animierte Stories/Beiträge als MP4). Der Plan steht in
-**`docs/PLAN-video-export.md`**. Die abgenommene Referenz für Tempo und Ablauf liegt in
-**`dev/video-vorschau/index.html`**. Mit dem Plan arbeiten, Abweichungen vorher mit Jan klären.
+Video-Export (animierte Stories/Beiträge als MP4), Phasen 1 und 2 umgesetzt: alle acht
+Anlässe der Saison-Designs sind animiert. Der Plan steht in
+**`docs/PLAN-video-export.md`** und hält auch die Choreografien fest (Abschnitte 4 und 4a).
+Mit dem Plan arbeiten, Abweichungen vorher mit Jan klären.
+
+Tempo und Ablauf prüft man im Generator selbst mit „▶ Vorschau“. Die frühere
+Referenzseite `dev/video-vorschau/` ist entfallen — sie enthielt eingefrorene Kopien der
+Layouts und wäre mit jeder Design-Änderung weiter auseinandergelaufen.
 
 ## Regeln
 
@@ -31,14 +36,14 @@ Video-Export (animierte Stories/Beiträge als MP4). Der Plan steht in
   dürfen jederzeit gepusht werden.
 - **Merge bzw. Push nach `main` nur nach ausdrücklicher Freigabe von Jan.**
 - Commit-Nachrichten auf Deutsch, kurz und beschreibend (Stil wie im bisherigen Verlauf).
-- `HOCHLADEN.md` stammt aus der Zeit, als per Web-Upload veröffentlicht wurde. Mit Git ist sie überflüssig.
+- Veröffentlicht wird ausschließlich über Git. Die alte Anleitung `HOCHLADEN.md` aus der
+  Zeit der Web-Uploads ist gelöscht; keine neue anlegen.
 
 ## Lokal testen
 
 ```bash
 python3 -m http.server 8000
 # Generator:  http://localhost:8000/
-# Vorschau:   http://localhost:8000/dev/video-vorschau/
 ```
 
 Am Handy (gleiches WLAN) braucht es HTTPS — ohne secure context laufen
