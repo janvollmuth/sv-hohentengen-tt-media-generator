@@ -448,6 +448,12 @@ einfährt.
 
 ### Wie es technisch läuft
 
+Wie beim PNG-Export wird jede Ebene geprüft und notfalls neu gerendert:
+html-to-image lässt ein frisch gesetztes, großes Foto gelegentlich aus. Bleibt
+eine Ebene vollständig durchsichtig, obwohl ihr Element sichtbar ist, wird bis
+zu viermal neu gerendert — sonst fehlte das Foto im Video, während es im Bild
+zu sehen ist.
+
 Nicht jeder Frame wird per html-to-image gerendert – das wäre am Handy zu
 langsam. Stattdessen wird das Layout einmal ohne die animierten Elemente
 gerendert (Grundebene) und dann je animiertem Element einmal mit transparentem

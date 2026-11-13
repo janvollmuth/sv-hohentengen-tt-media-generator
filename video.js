@@ -206,10 +206,26 @@ function toBitmap(dataUrl) {
   return fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (b) { return createImageBitmap(b); });
 }
 
+/* Ist auf der Ebene überhaupt etwas zu sehen?
+   html-to-image liefert ein frisch gesetztes, großes Foto gelegentlich noch
+   nicht mit — dann käme eine komplett durchsichtige Ebene heraus und das Foto
+   fehlte im Video. Der PNG-Export in app.js kennt dasselbe Problem und
+   rendert bis zu viermal (renderPng/pngHasPhoto); hier dieselbe Absicherung,
+   nur allgemeiner: ein sichtbares Element mit Fläche muss Pixel liefern. */
+function canvasLeer(c) {
+  try {
+    var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    /* Grobes Raster genügt: höchstens ~20000 Stichproben. */
+    var schritt = Math.max(1, Math.floor(d.length / 4 / 20000)) * 4;
+    for (var i = 3; i < d.length; i += schritt) if (d[i] > 10) return false;
+    return true;
+  } catch (e) { return false; }
+}
+
 /* Vollrender des Layouts mit transparentem Grund, auf ein Rechteck
    zugeschnitten. Sicher für Textblöcke: der Umbruch stammt aus dem fertig
    gesetzten Layout. */
-function renderCropped(node, fmt, css, rect) {
+function renderCroppedCanvas(node, fmt, css, rect) {
   return window.htmlToImage.toPng(node, {
     width: fmt.w, height: fmt.h, pixelRatio: 1, fontEmbedCSS: css
   }).then(toBitmap).then(function (bmp) {
@@ -218,7 +234,19 @@ function renderCropped(node, fmt, css, rect) {
     c.width = w; c.height = h;
     c.getContext('2d').drawImage(bmp, -Math.round(rect.x), -Math.round(rect.y));
     bmp.close();
-    return createImageBitmap(c);
+    return c;
+  });
+}
+
+function renderCropped(node, fmt, css, rect, versuch) {
+  versuch = versuch || 0;
+  return renderCroppedCanvas(node, fmt, css, rect).then(function (c) {
+    if (!canvasLeer(c)) return createImageBitmap(c);
+    if (versuch >= 3) {
+      console.warn('Video: Ebene blieb nach 4 Versuchen leer', rect);
+      return createImageBitmap(c);
+    }
+    return renderCropped(node, fmt, css, rect, versuch + 1);
   });
 }
 
@@ -226,7 +254,15 @@ function renderCropped(node, fmt, css, rect) {
    Blockelemente mit Fläche zuverlässig. Wird für die Zwischenwerte von
    count genutzt (reine Zahlen, kein Umbruch). */
 function renderElement(el, css) {
-  return window.htmlToImage.toPng(el, { pixelRatio: 1, fontEmbedCSS: css }).then(toBitmap);
+  return window.htmlToImage.toPng(el, { pixelRatio: 1, fontEmbedCSS: css })
+    .then(toBitmap).then(function (bmp) {
+      var c = document.createElement('canvas');
+      c.width = bmp.width; c.height = bmp.height;
+      c.getContext('2d').drawImage(bmp, 0, 0);
+      bmp.close();
+      if (canvasLeer(c)) throw new Error('leere Ebene');
+      return createImageBitmap(c);
+    });
 }
 
 function renderLayers(node, fmt, occ, css, bg, onStep) {
