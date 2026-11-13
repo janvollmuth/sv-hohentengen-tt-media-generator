@@ -324,7 +324,11 @@ stimmt der letzte Frame wie gefordert mit dem PNG überein.
   gleichzeitige Durchläufe merken sich gegenseitig den halb ausgeblendeten Zustand als
   Ausgangswert — der Bild-Export lieferte danach für den Rest der Sitzung ein fast leeres
   PNG, ohne Fehlermeldung. Nachgestellt: 9 von 12 Klickfolgen beschädigten den Export,
-  nach der Sperre 0 von 12.
+  nach der Sperre 0 von 12. Aus derselben Prüfung nachgezogen: Nach dem Durchlauf wacht
+  statt eines `requestAnimationFrame` je Bild ein sparsamer Zeitgeber über
+  Inhaltsänderungen (sonst hielte eine offene Vorschau am Handy den Bildschirm wach),
+  und wer während der Ebenen-Phase den Anlass wechselt, bekommt die fertige Vorschau des
+  alten Layouts nicht mehr über das neue gelegt.
 
 ## 6. Aufbau von `video.js`
 

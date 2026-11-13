@@ -760,6 +760,7 @@ var vorschau = null;
 function vorschauSchliessen() {
   if (!vorschau) return;
   cancelAnimationFrame(vorschau.raf);
+  if (vorschau.wache) clearInterval(vorschau.wache);
   if (vorschau.box.parentNode) vorschau.box.parentNode.removeChild(vorschau.box);
   if (vorschau.bar.parentNode) vorschau.bar.parentNode.removeChild(vorschau.bar);
   vorschau = null;
@@ -807,7 +808,7 @@ function vorschauStarten(parts, fmt) {
   var s = canvas.width / fmt.w;
   var gen = window.paintGen;
 
-  vorschau = { box: box, bar: bar, raf: 0 };
+  vorschau = { box: box, bar: bar, raf: 0, wache: 0 };
   /* Von Hand geschlossen: die Ebenen werden nicht mehr gebraucht. */
   zu.addEventListener('click', function () { vorschauSchliessen(); cacheLeeren(); });
 
@@ -816,28 +817,39 @@ function vorschauStarten(parts, fmt) {
        „Nochmal“ zwei Schleifen mit verschiedenen Startzeiten in dasselbe
        Canvas, und die verwaiste greift nach dem Schließen auf schon
        freigegebene Ebenen zu. */
-    if (vorschau) cancelAnimationFrame(vorschau.raf);
+    if (vorschau) {
+      cancelAnimationFrame(vorschau.raf);
+      if (vorschau.wache) { clearInterval(vorschau.wache); vorschau.wache = 0; }
+    }
     var start = performance.now();
-    var fertig = false;
+
+    /* Nach dem Durchlauf gibt es nichts mehr zu zeichnen — dann genügt
+       eine sparsame Wache, die auf Inhaltsänderungen schaut. Ein
+       requestAnimationFrame je Bild hielte am Handy nur den Bildschirm
+       wach, und stehen bleiben darf die Prüfung nicht: sonst bliebe eine
+       überholte Vorschau über dem Layout liegen. */
+    function wacheStarten() {
+      vorschau.wache = setInterval(function () {
+        if (!vorschau) return;
+        if (window.paintGen !== gen) { vorschauSchliessen(); cacheLeeren(); }
+      }, 400);
+    }
 
     function tick(now) {
       if (!vorschau) return;
-      /* Inhalt geändert? Dann ist die Vorschau überholt. Das muss auch
-         nach dem Durchlauf noch auffallen — darum läuft die Schleife
-         weiter und prüft nur, statt stehen zu bleiben. */
       if (window.paintGen !== gen) { vorschauSchliessen(); cacheLeeren(); return; }
       var t = (now - start) / 1000;
       if (t < parts.dauer) {
         drawFrame(ctx, parts, t, fmt, s);
         fill.style.width = (t / parts.dauer * 100) + '%';
         sek.textContent = Math.floor(t) + ' / ' + Math.round(parts.dauer) + ' s';
-      } else if (!fertig) {
-        fertig = true;
-        drawFrame(ctx, parts, parts.dauer, fmt, s);
-        fill.style.width = '100%';
-        sek.textContent = Math.round(parts.dauer) + ' / ' + Math.round(parts.dauer) + ' s';
+        vorschau.raf = requestAnimationFrame(tick);
+        return;
       }
-      vorschau.raf = requestAnimationFrame(tick);
+      drawFrame(ctx, parts, parts.dauer, fmt, s);
+      fill.style.width = '100%';
+      sek.textContent = Math.round(parts.dauer) + ' / ' + Math.round(parts.dauer) + ' s';
+      wacheStarten();
     }
 
     if (vorschau) vorschau.raf = requestAnimationFrame(tick);
@@ -857,14 +869,18 @@ if (vorschauBtn) {
     var p = window.progress(1, null, vorschauBtn);
     p.note('Ebenen vorbereiten …', 0);
     window.flushPaint();
-    var k = window.key(state.design, state.occasion, state.format);
-    window.ensurePainted(k);
+    /* Anlass, Format und Design vom Klick festhalten: wechselt der Nutzer
+       während der Ebenen-Phase, gehört die fertige Vorschau nicht mehr zu
+       dem, was im Rahmen steht. */
+    var occ = state.occasion, fmtId = state.format, des = state.design;
+    window.ensurePainted(window.key(des, occ, fmtId));
 
-    ebenenHolen(state.occasion, state.format, state.design, function (f) {
+    ebenenHolen(occ, fmtId, des, function (f) {
       p.note('Ebenen vorbereiten … ' + Math.round(f * 100) + ' %', f);
     }).then(function (parts) {
       p.end();
-      if (parts) vorschauStarten(parts, window.formatById(state.format));
+      var gewechselt = occ !== state.occasion || fmtId !== state.format || des !== state.design;
+      if (parts && !gewechselt) vorschauStarten(parts, window.formatById(fmtId));
     }).catch(function (e) {
       console.error(e);
       alert('Die Vorschau konnte nicht erzeugt werden. Bitte Seite neu laden und erneut versuchen.');
