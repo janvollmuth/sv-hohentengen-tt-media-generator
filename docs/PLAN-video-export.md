@@ -227,8 +227,11 @@ Vor dem Ausrollen auf weitere Formate jeden Anlass als Video an Jan geben (per T
   „n Bilder fertig“). `navigator.canShare({ files })` funktioniert auch mit MP4.
 - Dateiname: wie `fileName()`, aber `.mp4` (z. B. `SVH-Ergebnis-story-TTC-Musterstadt.mp4`).
 - Fehler: eigene Meldung „Das Video konnte nicht erzeugt werden …“ (nicht die Bild-Meldung aus `fail()`).
-- **Phase 2, optional:** „▶ Vorschau“ im `#frame`. Der Compositor spielt live auf ein Canvas über
-  der Vorschau (`requestAnimationFrame`), ohne zu kodieren.
+- **Live-Vorschau: umgesetzt am 13.11.2026** (auf Jans Wunsch vorgezogen). „▶ Vorschau“ im
+  `#frame`: der Compositor spielt live auf ein Canvas über der Vorschau
+  (`requestAnimationFrame`), ohne zu kodieren. `drawFrame()` nimmt dafür einen
+  Skalierungsfaktor. Die Ebenen liegen in einem Zwischenspeicher, den Vorschau und Export
+  teilen; er verfällt, sobald sich Inhalt, Ausschnitt oder Fotos ändern.
 
 ## 6. Aufbau von `video.js`
 
@@ -289,7 +292,7 @@ Instagram-Story. Ins Ergebnis-Protokoll als offene Punkte aufnehmen.
 | --- | --- | --- |
 | **1** | `video.js`, UI, Heimspiel + Ergebnis + Wochenvorschau + Ergebnisse der Woche × 3 Formate (Story, 4:5, 1:1) × Dunkel/Hell, Tests | Abschnitt 7 grün für alle vier Anlässe, Jan gibt Look frei |
 | 2 | Choreografien für Erinnerung, Spielerporträt, Mitglieder werben, Vereinsnachricht | je Anlass Kontaktbogen |
-| 3 (optional) | Live-Vorschau im Editor, MediaRecorder-Fallback, wählbare Dauer (10 s / 15 s / 20 s) | nach Bedarf |
+| 3 (optional) | ~~Live-Vorschau im Editor~~ (erledigt), MediaRecorder-Fallback, wählbare Dauer (10 s / 15 s / 20 s) | nach Bedarf |
 
 Archiv-Designs (H, A–F) und Fußball (`R.html`) sind ausdrücklich **nicht** im Umfang.
 

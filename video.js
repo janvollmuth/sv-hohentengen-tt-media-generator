@@ -451,10 +451,13 @@ function layerState(L, t, dauer) {
   return s;
 }
 
-/* ---------- Compositing eines Zeitpunkts ---------- */
-function drawFrame(ctx, parts, t, fmt) {
+/* ---------- Compositing eines Zeitpunkts ----------
+   s skaliert die ganze Ausgabe: 1 beim Kodieren, kleiner für die
+   Live-Vorschau, die nur die Größe des Vorschaurahmens braucht. */
+function drawFrame(ctx, parts, t, fmt, s) {
   var layers = parts.layers, dauer = parts.dauer;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  s = s || 1;
+  ctx.setTransform(s, 0, 0, s, 0, 0);
   ctx.globalAlpha = 1;
   ctx.drawImage(parts.base, 0, 0, fmt.w, fmt.h);
 
@@ -494,7 +497,7 @@ function drawFrame(ctx, parts, t, fmt) {
     if (s.clip && s.clip.w <= 0.5) return;
 
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(s, 0, 0, s, 0, 0);
     /* Beschnitt im Raum der Eltern-Ebene, Skalierung der eigenen Ebene
        wirkt innerhalb des Beschnitts. */
     if (L.parent >= 0) applyChain(L.parent);
@@ -515,6 +518,54 @@ function drawFrame(ctx, parts, t, fmt) {
   });
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
+}
+
+/* ---------- Ebenen-Zwischenspeicher ----------
+   Vorschau und Video brauchen dieselben Ebenen. Sie einmal zu rendern
+   dauert ein paar Sekunden, darum werden sie gemerkt — aber nur, solange
+   sich am Inhalt nichts geändert hat. paintGen zählt jede Textänderung
+   in app.js hoch; Ausschnitt und Fotos hängen nicht daran und kommen
+   darum zusätzlich in den Schlüssel. */
+var ebenenCache = null;
+
+function cacheSchluessel(occ, fmtId, designId) {
+  return [
+    window.key(designId, occ, fmtId),
+    window.paintGen,
+    JSON.stringify(window.state.crops || {}),
+    Object.keys(window.state.photos || {}).sort().join(',')
+  ].join('##');
+}
+
+function cacheLeeren() {
+  if (ebenenCache) {
+    freeLayers(ebenenCache.parts);
+    ebenenCache = null;
+  }
+}
+
+function ebenenHolen(occ, fmtId, designId, onStep) {
+  var k = cacheSchluessel(occ, fmtId, designId);
+  if (ebenenCache && ebenenCache.k === k) return Promise.resolve(ebenenCache.parts);
+  cacheLeeren();
+
+  var lk = window.key(designId, occ, fmtId);
+  var node = window.nodes[lk];
+  if (!node) return Promise.resolve(null);
+  var fmt = window.formatById(fmtId);
+  var vfmt = { w: fmt.w, h: fmt.h };
+  var bg = window.nodeBackground(node);
+
+  return window.FONTS_READY.then(window.buildFontCSS).then(function (css) {
+    return window.attached(node, function () {
+      return window.primeRenderer(node, bg).then(function () {
+        return renderLayers(node, vfmt, occ, css, bg, onStep);
+      });
+    });
+  }).then(function (parts) {
+    ebenenCache = { k: cacheSchluessel(occ, fmtId, designId), parts: parts };
+    return parts;
+  });
 }
 
 /* ---------- Kodieren ---------- */
@@ -585,37 +636,131 @@ function renderVideoFile(occ, fmtId, designId, onPhase) {
   window.flushPaint();
   var k = window.key(designId, occ, fmtId);
   window.ensurePainted(k);
-  var node = window.nodes[k];
-  if (!node) return Promise.resolve(null);
+  if (!window.nodes[k]) return Promise.resolve(null);
   var fmt = window.formatById(fmtId);
   /* Video immer in 1× Layoutgröße: 4K-Kodierung scheitert auf vielen Handys. */
   var vfmt = { w: fmt.w, h: fmt.h };
-  var bg = window.nodeBackground(node);
 
-  return window.FONTS_READY.then(window.buildFontCSS).then(function (css) {
-    return window.attached(node, function () {
-      return window.primeRenderer(node, bg).then(function () {
-        return renderLayers(node, vfmt, occ, css, bg, function (f) {
-          if (onPhase) onPhase('ebenen', f);
-        });
-      });
-    });
+  /* Lag eben eine Vorschau an, sind die Ebenen schon da. */
+  return ebenenHolen(occ, fmtId, designId, function (f) {
+    if (onPhase) onPhase('ebenen', f);
   }).then(function (parts) {
+    if (!parts) return null;
     return encodeVideo(parts, vfmt, function (f) {
       if (onPhase) onPhase('video', f);
-    }).then(function (blob) {
-      freeLayers(parts);
-      return blob;
-    }, function (e) {
-      freeLayers(parts);
-      throw e;
     });
   }).then(function (blob) {
+    if (!blob) return null;
     return new File([blob], videoFileName(occ, fmt), { type: 'video/mp4' });
   });
 }
 
-/* ---------- Knopf ---------- */
+/* ---------- Live-Vorschau ----------
+   Spielt die Animation im Vorschaurahmen ab, ohne zu kodieren: dieselben
+   Ebenen, dasselbe Compositing, nur auf ein kleines Canvas und per
+   requestAnimationFrame. Wer etwas am Text ändert, schließt sie damit
+   automatisch — sonst liefe eine veraltete Vorschau weiter. */
+var vorschau = null;
+
+function vorschauSchliessen() {
+  if (!vorschau) return;
+  cancelAnimationFrame(vorschau.raf);
+  if (vorschau.box.parentNode) vorschau.box.parentNode.removeChild(vorschau.box);
+  if (vorschau.bar.parentNode) vorschau.bar.parentNode.removeChild(vorschau.bar);
+  vorschau = null;
+}
+
+function vorschauStarten(parts, fmt) {
+  vorschauSchliessen();
+  var frame = document.getElementById('frame');
+  if (!frame) return;
+
+  var breite = frame.clientWidth, hoehe = frame.clientHeight;
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+
+  var box = document.createElement('div');
+  box.className = 'vorschau';
+  var canvas = document.createElement('canvas');
+  canvas.width = Math.round(breite * dpr);
+  canvas.height = Math.round(hoehe * dpr);
+  box.appendChild(canvas);
+  frame.appendChild(box);
+
+  /* Bedienzeile unter den Rahmen, damit sie das Layout nicht verdeckt. */
+  var bar = document.createElement('div');
+  bar.className = 'vor-bar';
+  var track = document.createElement('div');
+  track.className = 'vor-t';
+  var fill = document.createElement('div');
+  fill.className = 'vor-b';
+  track.appendChild(fill);
+  var sek = document.createElement('div');
+  sek.className = 'vor-s';
+  var nochmal = document.createElement('button');
+  nochmal.type = 'button';
+  nochmal.className = 'vor-k';
+  nochmal.textContent = 'Nochmal';
+  var zu = document.createElement('button');
+  zu.type = 'button';
+  zu.className = 'vor-k';
+  zu.textContent = 'Schließen';
+  bar.appendChild(track); bar.appendChild(sek);
+  bar.appendChild(nochmal); bar.appendChild(zu);
+  frame.parentNode.insertBefore(bar, frame.nextSibling);
+
+  var ctx = canvas.getContext('2d', { alpha: false });
+  var s = canvas.width / fmt.w;
+  var gen = window.paintGen;
+
+  vorschau = { box: box, bar: bar, raf: 0 };
+  /* Von Hand geschlossen: die Ebenen werden nicht mehr gebraucht. */
+  zu.addEventListener('click', function () { vorschauSchliessen(); cacheLeeren(); });
+
+  function lauf() {
+    var start = performance.now();
+    function tick(now) {
+      /* Inhalt geändert? Dann ist die Vorschau überholt. */
+      if (window.paintGen !== gen) { vorschauSchliessen(); cacheLeeren(); return; }
+      var t = (now - start) / 1000;
+      if (t > parts.dauer) t = parts.dauer;
+      drawFrame(ctx, parts, t, fmt, s);
+      fill.style.width = (t / parts.dauer * 100) + '%';
+      sek.textContent = Math.floor(t) + ' / ' + Math.round(parts.dauer) + ' s';
+      if (t < parts.dauer && vorschau) vorschau.raf = requestAnimationFrame(tick);
+    }
+    if (vorschau) vorschau.raf = requestAnimationFrame(tick);
+  }
+  nochmal.addEventListener('click', lauf);
+  lauf();
+}
+
+/* ---------- Knöpfe ---------- */
+var vorschauBtn = document.getElementById('preview-video');
+if (vorschauBtn) {
+  vorschauBtn.addEventListener('click', function () {
+    vorschauSchliessen();
+    window.busy(vorschauBtn, true, 'Moment …');
+    var p = window.progress(1, null, vorschauBtn);
+    p.note('Ebenen vorbereiten …', 0);
+    window.flushPaint();
+    var k = window.key(state.design, state.occasion, state.format);
+    window.ensurePainted(k);
+
+    ebenenHolen(state.occasion, state.format, state.design, function (f) {
+      p.note('Ebenen vorbereiten … ' + Math.round(f * 100) + ' %', f);
+    }).then(function (parts) {
+      p.end();
+      if (parts) vorschauStarten(parts, window.formatById(state.format));
+    }).catch(function (e) {
+      console.error(e);
+      alert('Die Vorschau konnte nicht erzeugt werden. Bitte Seite neu laden und erneut versuchen.');
+    }).then(function () {
+      p.end();
+      window.busy(vorschauBtn, false);
+    });
+  });
+}
+
 var videoBtn = document.getElementById('save-video');
 if (videoBtn) {
   videoBtn.addEventListener('click', function () {
@@ -623,6 +768,9 @@ if (videoBtn) {
       alert('Video-Export braucht einen aktuellen Browser: Chrome, Edge oder Safari ab iOS 17. Am PC klappt es immer.');
       return;
     }
+    /* Erst schließen: sonst zeichnet die Vorschau noch auf Ebenen, die
+       beim Neuaufbau freigegeben werden könnten. */
+    vorschauSchliessen();
     window.busy(videoBtn, true, 'Erzeuge …');
     var p = window.progress(1, null, videoBtn);
     p.note('Ebenen vorbereiten …', 0);
@@ -640,6 +788,12 @@ if (videoBtn) {
           alert('Das Video konnte nicht erzeugt werden. Bitte Seite neu laden und erneut versuchen.');
         }
       })
-      .then(function () { p.end(); window.busy(videoBtn, false); });
+      .then(function () {
+        p.end();
+        window.busy(videoBtn, false);
+        /* Läuft keine Vorschau mehr, geben wir den Speicher frei —
+           die Ebenen eines Story-Layouts sind rund 10 MB. */
+        if (!vorschau) cacheLeeren();
+      });
   });
 }

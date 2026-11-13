@@ -364,6 +364,21 @@ zu kodieren scheitert auf vielen Handys.
 Browser zeigen beim Klick einen Hinweis, der Generator läuft normal weiter.
 Die Video-Bibliothek (mediabunny) wird erst beim ersten Klick nachgeladen.
 
+### Vorschau ohne Export
+
+Neben „Video speichern" steht **„▶ Vorschau"**. Sie spielt die Animation
+direkt im Vorschaurahmen ab, ohne zu kodieren – gut, um Tempo und Reihenfolge
+zu prüfen, bevor man eine Datei erzeugt. Darunter erscheinen ein Zeitbalken
+sowie „Nochmal" und „Schließen".
+
+Die Vorschau nutzt dieselben Ebenen und dasselbe Compositing wie der Export,
+zeigt also genau das, was später im Video steht. Sie schließt sich von selbst,
+sobald sich Text, Format, Anlass oder Design ändern – sonst liefe eine
+veraltete Fassung weiter.
+
+Die vorbereiteten Ebenen werden gemerkt: „Nochmal" startet sofort, und ein
+anschließendes „Video speichern" spart sich das erneute Rendern.
+
 ### Am Handy ausprobieren
 
 WebCodecs und `navigator.share` laufen nur in einem „secure context", also

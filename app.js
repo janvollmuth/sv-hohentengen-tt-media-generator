@@ -1737,14 +1737,19 @@ function sync() {
   packBtn.hidden = others.length < 2;
   packBtn.textContent = 'Alle ' + others.length + ' Formate als Paket';
 
-  /* Video-Export (video.js): nur wo das Layout Animationen mitbringt und
-     nicht für A4. Layouts ohne [data-anim] verhalten sich wie bisher. */
+  /* Video-Export und Live-Vorschau (video.js): nur wo das Layout
+     Animationen mitbringt und nicht für A4. Layouts ohne [data-anim]
+     verhalten sich wie bisher. */
+  var animiert = fmt.id !== 'a4'
+    && typeof videoAnimated === 'function'
+    && videoAnimated(node);
   var vidBtn = document.getElementById('save-video');
-  if (vidBtn) {
-    vidBtn.hidden = fmt.id === 'a4'
-      || typeof videoAnimated !== 'function'
-      || !videoAnimated(node);
-  }
+  if (vidBtn) vidBtn.hidden = !animiert;
+  var vorBtn = document.getElementById('preview-video');
+  if (vorBtn) vorBtn.hidden = !animiert;
+  /* Beim Wechsel von Anlass, Format oder Design zeigt eine offene
+     Vorschau das falsche Layout. */
+  if (typeof vorschauSchliessen === 'function') vorschauSchliessen();
 
   hintEl.textContent = fmt.id === 'a4'
     ? 'A4 mit 300 dpi — zum Ausdrucken oder per Mail an die Druckerei. Nach dem Erzeugen kannst du teilen oder speichern.'
