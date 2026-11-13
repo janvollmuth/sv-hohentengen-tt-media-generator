@@ -1748,8 +1748,9 @@ function sync() {
   var vorBtn = document.getElementById('preview-video');
   if (vorBtn) vorBtn.hidden = !animiert;
   /* Beim Wechsel von Anlass, Format oder Design zeigt eine offene
-     Vorschau das falsche Layout. */
-  if (typeof vorschauSchliessen === 'function') vorschauSchliessen();
+     Vorschau das falsche Layout; die vorbereiteten Ebenen passen dann
+     auch nicht mehr. */
+  if (typeof videoAufraeumen === 'function') videoAufraeumen();
 
   hintEl.textContent = fmt.id === 'a4'
     ? 'A4 mit 300 dpi — zum Ausdrucken oder per Mail an die Druckerei. Nach dem Erzeugen kannst du teilen oder speichern.'
@@ -2003,10 +2004,17 @@ function fail(e) {
 var oneBtn = document.getElementById('save-one');
 oneBtn.addEventListener('click', function () {
   busy(oneBtn, true);
+  /* Sperre aus video.js: während ein Export läuft, darf kein zweiter an
+     dasselbe Layout — sonst erwischt einer von beiden ein halb
+     ausgeblendetes Layout. Ohne video.js passiert hier nichts. */
+  if (typeof layoutSperren === 'function') layoutSperren();
   renderFile(state.occasion, state.format, state.design)
     .then(function (f) { return deliver([f]); })
     .catch(fail)
-    .then(function () { busy(oneBtn, false); });
+    .then(function () {
+      if (typeof layoutFreigeben === 'function') layoutFreigeben();
+      busy(oneBtn, false);
+    });
 });
 
 /* Fortschrittsbalken mit Zähler: vier Formate brauchen zusammen einige
@@ -2046,6 +2054,8 @@ var packBtn = document.getElementById('save-pack');
 packBtn.addEventListener('click', function () {
   var list = formatsForDesign(state.occasion, state.design);
   busy(packBtn, true, 'Erzeuge …');
+  /* Sperre aus video.js, siehe „Bild speichern“. */
+  if (typeof layoutSperren === 'function') layoutSperren();
   var p = progress(list.length);
   var files = [];
   list.reduce(function (prev, f, i) {
@@ -2059,7 +2069,11 @@ packBtn.addEventListener('click', function () {
   }, Promise.resolve())
     .then(function () { p.end(); return deliver(files); })
     .catch(fail)
-    .then(function () { p.end(); busy(packBtn, false); });
+    .then(function () {
+      p.end();
+      if (typeof layoutFreigeben === 'function') layoutFreigeben();
+      busy(packBtn, false);
+    });
 });
 
 boot();

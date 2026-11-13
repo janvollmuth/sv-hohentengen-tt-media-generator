@@ -152,7 +152,7 @@ function collectAnimLayers(node, scale) {
        bekommt data-anim-after="list". */
     var row = rowOf(el);
     if (row) {
-      delay = (row.el === el ? row.start + delay : row.start + delay);
+      delay = row.start + delay;
     } else if (el.getAttribute('data-anim-after') === 'list' && listEl) {
       delay = staggerStart + sichtbareRows * stagger + delay;
     }
@@ -505,48 +505,50 @@ function drawFrame(ctx, parts, t, fmt, s) {
     var p = layers[i].parent;
     return p >= 0 ? a * alphaOf(p) : a;
   }
+  /* z ist der Zustand einer Ebene, s die Skalierung der ganzen Ausgabe —
+     die beiden dürfen sich nicht überdecken. */
   function applyChain(i) {
     var p = layers[i].parent;
     if (p >= 0) applyChain(p);
-    var s = states[i];
-    if (s.tx || s.ty) ctx.translate(s.tx, s.ty);
-    if (s.scale !== 1) {
-      ctx.translate(s.ox, s.oy);
-      ctx.scale(s.scale, s.scale);
-      ctx.translate(-s.ox, -s.oy);
+    var z = states[i];
+    if (z.tx || z.ty) ctx.translate(z.tx, z.ty);
+    if (z.scale !== 1) {
+      ctx.translate(z.ox, z.oy);
+      ctx.scale(z.scale, z.scale);
+      ctx.translate(-z.ox, -z.oy);
     }
   }
 
   layers.forEach(function (L, i) {
-    var s = states[i];
+    var z = states[i];
     var a = alphaOf(i);
     if (a <= 0.002) return;
 
     var bmp = L.bmp, rect = L.rect;
     if (L.effect === 'count') {
-      var idx = s.wert < 0 ? 0 : s.wert;
+      var idx = z.wert < 0 ? 0 : z.wert;
       if (!L.werte || !L.werte[idx]) return;
       bmp = L.werte[idx].bmp;
       rect = L.werte[idx].rect;
     }
     if (!bmp) return;
-    if (s.clip && s.clip.w <= 0.5) return;
+    if (z.clip && z.clip.w <= 0.5) return;
 
     ctx.save();
     ctx.setTransform(s, 0, 0, s, 0, 0);
     /* Beschnitt im Raum der Eltern-Ebene, Skalierung der eigenen Ebene
        wirkt innerhalb des Beschnitts. */
     if (L.parent >= 0) applyChain(L.parent);
-    if (s.clip) {
+    if (z.clip) {
       ctx.beginPath();
-      ctx.rect(s.clip.x, s.clip.y, s.clip.w, s.clip.h);
+      ctx.rect(z.clip.x, z.clip.y, z.clip.w, z.clip.h);
       ctx.clip();
     }
-    if (s.tx || s.ty) ctx.translate(s.tx, s.ty);
-    if (s.scale !== 1) {
-      ctx.translate(s.ox, s.oy);
-      ctx.scale(s.scale, s.scale);
-      ctx.translate(-s.ox, -s.oy);
+    if (z.tx || z.ty) ctx.translate(z.tx, z.ty);
+    if (z.scale !== 1) {
+      ctx.translate(z.ox, z.oy);
+      ctx.scale(z.scale, z.scale);
+      ctx.translate(-z.ox, -z.oy);
     }
     ctx.globalAlpha = a;
     ctx.drawImage(bmp, rect.x, rect.y, rect.w, rect.h);
@@ -580,9 +582,52 @@ function cacheLeeren() {
   }
 }
 
+/* ---------- Sperre ----------
+   Beim Ebenen-Rendern wird am echten Layout-Knoten visibility und opacity
+   umgeschaltet und hinterher wieder zurückgesetzt. Liefe dabei ein zweiter
+   Vorgang (zweiter Tipper auf den Nachbarknopf, „Bild speichern“ nebenher),
+   würde der sich den halb ausgeblendeten Zustand als Ausgangswert merken
+   und ihn am Ende wiederherstellen — der Bild-Export lieferte dann für den
+   Rest der Sitzung ein fast leeres PNG, ohne jede Fehlermeldung. Darum darf
+   immer nur ein Vorgang an das Layout. Die Sperre gilt für alle vier
+   Export-Knöpfe; gelöst wird nur, was diese Sperre selbst gesperrt hat.
+   Während des Kodierens bleibt sie bestehen, weil die Ebenen dann noch
+   gebraucht werden. */
+var layoutBelegt = false;    /* ein Export hält die Knöpfe */
+var videoLaeuft = false;     /* Video-Export insgesamt, Ebenen noch in Gebrauch */
+var ebenenLaeuft = false;    /* renderLayers schaltet gerade am Knoten um */
+var SPERR_KNOEPFE = ['save-one', 'save-pack', 'save-video', 'preview-video'];
+var gesperrt = [];
+
+function layoutSperren() {
+  layoutBelegt = true;
+  SPERR_KNOEPFE.forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b && !b.disabled) { b.disabled = true; gesperrt.push(b); }
+  });
+}
+
+function layoutFreigeben() {
+  layoutBelegt = false;
+  gesperrt.forEach(function (b) { b.disabled = false; });
+  gesperrt = [];
+}
+
+/* Offene Vorschau schließen und Ebenen freigeben — für app.js beim Wechsel
+   von Anlass, Format oder Design. Während eines Exports bleiben die Ebenen
+   liegen, der Kodierer zeichnet noch aus ihnen. */
+function videoAufraeumen() {
+  vorschauSchliessen();
+  if (!videoLaeuft) cacheLeeren();
+}
+
 function ebenenHolen(occ, fmtId, designId, onStep) {
   var k = cacheSchluessel(occ, fmtId, designId);
   if (ebenenCache && ebenenCache.k === k) return Promise.resolve(ebenenCache.parts);
+  /* Zweite Absicherung hinter der Knopfsperre: zwei Durchläufe gleichzeitig
+     am selben Knoten würden sich gegenseitig den Ausgangszustand
+     überschreiben. */
+  if (ebenenLaeuft) return Promise.reject(new Error('Ebenen werden gerade gebaut'));
   cacheLeeren();
 
   var lk = window.key(designId, occ, fmtId);
@@ -592,6 +637,7 @@ function ebenenHolen(occ, fmtId, designId, onStep) {
   var vfmt = { w: fmt.w, h: fmt.h };
   var bg = window.nodeBackground(node);
 
+  ebenenLaeuft = true;
   return window.FONTS_READY.then(window.buildFontCSS).then(function (css) {
     return window.attached(node, function () {
       return window.primeRenderer(node, bg).then(function () {
@@ -599,8 +645,15 @@ function ebenenHolen(occ, fmtId, designId, onStep) {
       });
     });
   }).then(function (parts) {
-    ebenenCache = { k: cacheSchluessel(occ, fmtId, designId), parts: parts };
+    ebenenLaeuft = false;
+    /* Schlüssel von vor dem Rendern: hat sich der Inhalt zwischendurch
+       geändert, passen die Ebenen nicht mehr und der nächste Aufruf baut
+       sie neu, statt einen halb veralteten Satz weiterzureichen. */
+    ebenenCache = { k: k, parts: parts };
     return parts;
+  }, function (e) {
+    ebenenLaeuft = false;
+    throw e;
   });
 }
 
@@ -658,6 +711,12 @@ function encodeVideo(parts, fmt, onProgress) {
         return out.finalize();
       }).then(function () {
         return new Blob([out.target.buffer], { type: 'video/mp4' });
+      }, function (e) {
+        /* Bricht das Kodieren ab, sonst den Kodierer stehen lassen: am
+           Handy summiert sich das über mehrere Fehlversuche. */
+        try { src.close(); } catch (e2) { /* schon geschlossen */ }
+        try { out.cancel(); } catch (e3) { /* noch nicht gestartet */ }
+        throw e;
       });
     });
   });
@@ -753,17 +812,34 @@ function vorschauStarten(parts, fmt) {
   zu.addEventListener('click', function () { vorschauSchliessen(); cacheLeeren(); });
 
   function lauf() {
+    /* Eine noch laufende Schleife zuerst beenden: sonst zeichnen nach
+       „Nochmal“ zwei Schleifen mit verschiedenen Startzeiten in dasselbe
+       Canvas, und die verwaiste greift nach dem Schließen auf schon
+       freigegebene Ebenen zu. */
+    if (vorschau) cancelAnimationFrame(vorschau.raf);
     var start = performance.now();
+    var fertig = false;
+
     function tick(now) {
-      /* Inhalt geändert? Dann ist die Vorschau überholt. */
+      if (!vorschau) return;
+      /* Inhalt geändert? Dann ist die Vorschau überholt. Das muss auch
+         nach dem Durchlauf noch auffallen — darum läuft die Schleife
+         weiter und prüft nur, statt stehen zu bleiben. */
       if (window.paintGen !== gen) { vorschauSchliessen(); cacheLeeren(); return; }
       var t = (now - start) / 1000;
-      if (t > parts.dauer) t = parts.dauer;
-      drawFrame(ctx, parts, t, fmt, s);
-      fill.style.width = (t / parts.dauer * 100) + '%';
-      sek.textContent = Math.floor(t) + ' / ' + Math.round(parts.dauer) + ' s';
-      if (t < parts.dauer && vorschau) vorschau.raf = requestAnimationFrame(tick);
+      if (t < parts.dauer) {
+        drawFrame(ctx, parts, t, fmt, s);
+        fill.style.width = (t / parts.dauer * 100) + '%';
+        sek.textContent = Math.floor(t) + ' / ' + Math.round(parts.dauer) + ' s';
+      } else if (!fertig) {
+        fertig = true;
+        drawFrame(ctx, parts, parts.dauer, fmt, s);
+        fill.style.width = '100%';
+        sek.textContent = Math.round(parts.dauer) + ' / ' + Math.round(parts.dauer) + ' s';
+      }
+      vorschau.raf = requestAnimationFrame(tick);
     }
+
     if (vorschau) vorschau.raf = requestAnimationFrame(tick);
   }
   nochmal.addEventListener('click', lauf);
@@ -774,8 +850,10 @@ function vorschauStarten(parts, fmt) {
 var vorschauBtn = document.getElementById('preview-video');
 if (vorschauBtn) {
   vorschauBtn.addEventListener('click', function () {
+    if (layoutBelegt) return;
     vorschauSchliessen();
     window.busy(vorschauBtn, true, 'Moment …');
+    layoutSperren();
     var p = window.progress(1, null, vorschauBtn);
     p.note('Ebenen vorbereiten …', 0);
     window.flushPaint();
@@ -792,6 +870,7 @@ if (vorschauBtn) {
       alert('Die Vorschau konnte nicht erzeugt werden. Bitte Seite neu laden und erneut versuchen.');
     }).then(function () {
       p.end();
+      layoutFreigeben();
       window.busy(vorschauBtn, false);
     });
   });
@@ -804,10 +883,13 @@ if (videoBtn) {
       alert('Video-Export braucht einen aktuellen Browser: Chrome, Edge oder Safari ab iOS 17. Am PC klappt es immer.');
       return;
     }
+    if (layoutBelegt) return;
     /* Erst schließen: sonst zeichnet die Vorschau noch auf Ebenen, die
        beim Neuaufbau freigegeben werden könnten. */
     vorschauSchliessen();
     window.busy(videoBtn, true, 'Erzeuge …');
+    videoLaeuft = true;
+    layoutSperren();
     var p = window.progress(1, null, videoBtn);
     p.note('Ebenen vorbereiten …', 0);
 
@@ -826,6 +908,8 @@ if (videoBtn) {
       })
       .then(function () {
         p.end();
+        videoLaeuft = false;
+        layoutFreigeben();
         window.busy(videoBtn, false);
         /* Läuft keine Vorschau mehr, geben wir den Speicher frei —
            die Ebenen eines Story-Layouts sind rund 10 MB. */

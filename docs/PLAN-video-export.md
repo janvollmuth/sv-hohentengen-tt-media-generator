@@ -316,6 +316,15 @@ stimmt der letzte Frame wie gefordert mit dem PNG überein.
   (`requestAnimationFrame`), ohne zu kodieren. `drawFrame()` nimmt dafür einen
   Skalierungsfaktor. Die Ebenen liegen in einem Zwischenspeicher, den Vorschau und Export
   teilen; er verfällt, sobald sich Inhalt, Ausschnitt oder Fotos ändern.
+- **Sperre, nachgerüstet am 13.11.2026** nach der unabhängigen Prüfung von PR #1: Solange
+  ein Export läuft, sperren sich „Bild speichern“, „Alle Formate als Paket“,
+  „Video speichern“ und „▶ Vorschau“ gegenseitig (`layoutSperren` / `layoutFreigeben` in
+  `video.js`, aufgerufen auch aus den beiden Bild-Handlern in `app.js`). Grund: Das
+  Ebenen-Rendern blendet Teile des Layouts aus und stellt sie danach wieder her. Zwei
+  gleichzeitige Durchläufe merken sich gegenseitig den halb ausgeblendeten Zustand als
+  Ausgangswert — der Bild-Export lieferte danach für den Rest der Sitzung ein fast leeres
+  PNG, ohne Fehlermeldung. Nachgestellt: 9 von 12 Klickfolgen beschädigten den Export,
+  nach der Sperre 0 von 12.
 
 ## 6. Aufbau von `video.js`
 

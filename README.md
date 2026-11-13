@@ -464,6 +464,14 @@ einfährt.
 
 ### Wie es technisch läuft
 
+**Immer nur ein Export auf einmal.** Beim Vorbereiten der Ebenen werden Teile
+des Layouts kurz ausgeblendet und danach wieder eingeblendet. Liefe ein
+zweiter Export gleichzeitig, würde er diesen Zwischenzustand als Normalzustand
+missverstehen und am Ende wiederherstellen — der Bild-Export lieferte dann ein
+fast leeres Bild, ohne jede Fehlermeldung. Darum sperren „Bild speichern",
+„Alle Formate als Paket", „Video speichern" und „▶ Vorschau" einander, solange
+einer von ihnen arbeitet.
+
 Wie beim PNG-Export wird jede Ebene geprüft und notfalls neu gerendert:
 html-to-image lässt ein frisch gesetztes, großes Foto gelegentlich aus. Bleibt
 eine Ebene vollständig durchsichtig, obwohl ihr Element sichtbar ist, wird bis
