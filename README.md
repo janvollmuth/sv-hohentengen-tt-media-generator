@@ -14,6 +14,7 @@ app.css / app.js        Oberfläche und Logik
 video.js                Video-Export (animierte Stories und Beiträge)
 fotos-verwalten.html    Fotos verschlüsseln und ins Paket legen
 admin.js                Logik dazu
+dev/handy-test.py       Testserver per HTTPS, um am Handy zu probieren
 designs/manifest.json   Liste der Design-Vorlagen
 designs/saison-2026-27-dunkel.html  Saison-Design 2026/27, dunkel: alle Anlässe, alle Formate
 designs/saison-2026-27-hell.html    Saison-Design 2026/27, hell: alle Anlässe, alle Formate
@@ -362,6 +363,24 @@ zu kodieren scheitert auf vielen Handys.
 **Voraussetzung ist WebCodecs:** Chrome, Edge und Safari ab iOS 17. Ältere
 Browser zeigen beim Klick einen Hinweis, der Generator läuft normal weiter.
 Die Video-Bibliothek (mediabunny) wird erst beim ersten Klick nachgeladen.
+
+### Am Handy ausprobieren
+
+WebCodecs und `navigator.share` laufen nur in einem „secure context", also
+über HTTPS oder `localhost`. Ein einfaches `python3 -m http.server` reicht
+dafür nicht: über `http://192.168.x.x` bleibt „Video speichern" wirkungslos,
+während der Bild-Export dort normal funktioniert.
+
+```bash
+python3 dev/handy-test.py
+```
+
+Das Skript nennt die Adresse, unter der das Handy im selben WLAN den Rechner
+erreicht (z. B. `https://192.168.178.45:8443/`). Das Zertifikat ist
+selbstsigniert, der Browser warnt also beim ersten Aufruf — iOS „Details
+einblenden" → „Diese Website besuchen", Android „Erweitert" → „Weiter zu …".
+Das Zertifikat liegt in `dev/.zertifikat/` (nicht im Repo) und wird
+wiederverwendet, solange der Rechner dieselbe IP hat.
 
 ### Wie ein Layout animiert wird
 

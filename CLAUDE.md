@@ -41,5 +41,12 @@ python3 -m http.server 8000
 # Vorschau:   http://localhost:8000/dev/video-vorschau/
 ```
 
+Am Handy (gleiches WLAN) braucht es HTTPS — ohne secure context laufen
+WebCodecs und `navigator.share` nicht, der Video-Knopf bliebe tot:
+
+```bash
+python3 dev/handy-test.py
+```
+
 Automatisierte Prüfungen mit Playwright (Chromium), Videoanalyse mit `ffprobe`/`ffmpeg`,
 siehe Plan, Abschnitt 7.
