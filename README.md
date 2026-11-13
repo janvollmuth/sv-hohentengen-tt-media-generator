@@ -11,6 +11,7 @@ Texte und Foto einsetzen → Bild speichern. Am Layout kann nichts verrutschen.
 ```
 index.html              App-Hülle (ändert sich selten)
 app.css / app.js        Oberfläche und Logik
+video.js                Video-Export (animierte Stories und Beiträge)
 fotos-verwalten.html    Fotos verschlüsseln und ins Paket legen
 admin.js                Logik dazu
 designs/manifest.json   Liste der Design-Vorlagen
@@ -329,11 +330,100 @@ Sie stammen aus dem Design-Board `Instagram Story Template.dc.html` im
 Omelette-Projekt. Änderungen dort werden nach `designs/` übertragen.
 Das Fußball-Design `designs/R.html` kommt genauso aus `Fussball-Design.dc.html`.
 
+## Video-Export
+
+Neben „Bild speichern“ gibt es bei animierten Layouts **„Video speichern“**: das
+Layout baut sich in rund acht Sekunden auf und bleibt dann stehen, insgesamt
+15 Sekunden. Heraus kommt ein MP4 (H.264), das sich direkt nach Instagram oder
+WhatsApp teilen lässt. Ton hat das Video keinen – Musik legt man in Instagram
+selbst darauf.
+
+Der Knopf erscheint nur, wenn das Layout mindestens ein `data-anim` enthält und
+das Format nicht A4 ist. Der PNG-Export ist davon unberührt.
+
+**Der letzte Frame entspricht dem PNG-Export.** Alle Effekte enden im
+Ruhezustand des Layouts. Wer das Video anhält, sieht also das Bild.
+
+| | |
+| --- | --- |
+| Auflösung | 1× Layoutgröße: Story 1080 × 1920, 4:5 1080 × 1350, 1:1 1080 × 1080 |
+| Bildrate | 30 fps |
+| Dauer | 15 s, je Layout über `data-anim-duration` am Wurzelknoten änderbar |
+| Codec | H.264, 8 Mbit/s, Keyframe alle 2 s, MP4 mit `moov` vorne |
+
+Anders als beim Bild wird **nicht** in doppelter Auflösung exportiert: 4K-Video
+zu kodieren scheitert auf vielen Handys.
+
+**Voraussetzung ist WebCodecs:** Chrome, Edge und Safari ab iOS 17. Ältere
+Browser zeigen beim Klick einen Hinweis, der Generator läuft normal weiter.
+Die Video-Bibliothek (mediabunny) wird erst beim ersten Klick nachgeladen.
+
+### Wie ein Layout animiert wird
+
+Das Verhalten steht in `data-`Attributen am Layout, nicht in `video.js`.
+Layouts ohne diese Attribute bleiben, wie sie sind.
+
+| Attribut | Werte | Bedeutung |
+| --- | --- | --- |
+| `data-anim` | siehe Tabelle unten | Effekt |
+| `data-anim-delay` | Sekunden, Standard `0` | Start |
+| `data-anim-dur` | Sekunden, Standard `1.2` (`count`: `1.5`) | Länge |
+| `data-anim-dist` | Pixel, Standard `120` | Weg bei `slide-*` |
+| `data-anim-origin` | `mitte` (Standard), `links`, `rechts` | Ursprung beim Skalieren |
+
+Effekte:
+
+| Effekt | Was passiert |
+| --- | --- |
+| `fade` | Deckkraft 0 → 1 |
+| `slide-up` / `slide-down` / `slide-left` / `slide-right` | fährt um `dist` Pixel ein, dabei einblendend |
+| `scale-in` | Skalierung 0.85 → 1, einblendend |
+| `pop` | Skalierung 0 → 1 mit Überschwinger |
+| `stamp` | Skalierung 1.7 → 1 mit Überschwinger, für die schrägen roten Etiketten |
+| `wipe-right` | wird von links nach rechts aufgedeckt |
+| `kenburns` | Foto zoomt über die ganze Videodauer von 1.0 auf 1.12 |
+| `count` | Zahl zählt von 0 auf den Endwert hoch |
+| `static` | immer voll sichtbar; nur damit die Ebene über einer animierten Ebene liegt (z. B. der Verlauf über dem zoomenden Foto) |
+
+`count` gilt nur für ganze Zahlen von 0 bis 20; bei allem anderen wird
+automatisch `fade` daraus. Eine im Layout gesetzte Drehung (`rotate(-2.5deg)`)
+bleibt bei allen Skalierungs-Effekten erhalten.
+
+**Listen mit wechselnd vielen Zeilen** (Wochenvorschau, Ergebnisse der Woche)
+bekommen am Listen-Container:
+
+| Attribut | Bedeutung |
+| --- | --- |
+| `data-anim-stagger` | Abstand der Zeilenstarts in Sekunden |
+| `data-anim-stagger-start` | wann die erste Zeile startet |
+
+Ausgeblendete Zeilen (`data-hide-empty`) werden übersprungen. Delays von
+Elementen **innerhalb** einer Zeile gelten relativ zum Start dieser Zeile.
+Ein Element nach der Liste bekommt `data-anim-after="list"`: es startet,
+nachdem die letzte Zeile begonnen hat, plus seinem eigenen Delay.
+
+Verschachtelung ist erlaubt: ein `data-anim` in einem anderen `data-anim` wird
+in der Eltern-Ebene ausgeblendet und separat gezeichnet, seine Bewegung addiert
+sich zur Eltern-Ebene. So zählt der Punktestand hoch, während seine Zeile noch
+einfährt.
+
+### Wie es technisch läuft
+
+Nicht jeder Frame wird per html-to-image gerendert – das wäre am Handy zu
+langsam. Stattdessen wird das Layout einmal ohne die animierten Elemente
+gerendert (Grundebene) und dann je animiertem Element einmal mit transparentem
+Grund, zugeschnitten auf dessen Rechteck. Pro Frame zeichnet `video.js` diese
+Bitmaps mit Verschiebung, Skalierung und Deckkraft auf ein Canvas; kodiert wird
+per WebCodecs, gemuxt per mediabunny.
+
+Ein Story-Video mit 450 Frames entsteht am Rechner in rund drei Sekunden.
+
 ## Nach dem Hochladen: Versionsnummer
 
-In `index.html` hängen `app.js` und `app.css` mit `?v=…` (Datum) an. Bei jeder
-Änderung an `app.js` oder `app.css` das Datum erhöhen – sonst zeigen Browser und
-Handys bis zu einigen Stunden noch die alte, zwischengespeicherte Version.
+In `index.html` hängen `app.js`, `app.css` und `video.js` mit `?v=…` (Datum) an.
+Bei jeder Änderung an einer dieser Dateien das Datum erhöhen – sonst zeigen
+Browser und Handys bis zu einigen Stunden noch die alte, zwischengespeicherte
+Version.
 
 ## Exportgröße
 
