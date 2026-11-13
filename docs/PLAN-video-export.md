@@ -213,6 +213,90 @@ Bei Wochenvorschau und Ergebnissen hängen die Startzeiten von der Zahl der sich
 
 Vor dem Ausrollen auf weitere Formate jeden Anlass als Video an Jan geben (per Teilen-Dialog oder als Datei).
 
+## 4a. Choreografien Phase 2: Erinnerung, Spielerporträt, Mitglieder werben, Vereinsnachricht
+
+*Umgesetzt am 13.11.2026.* Jeweils in beiden Saison-Designs (dunkel und hell) und in
+`story`, `post45` und `post11`; A4 bleibt außen vor. Neue Effekte braucht keine dieser
+vier Choreografien — sie kommen mit dem Vorrat aus Phase 1 aus.
+
+Gemeinsam ist allen vieren der Auftakt aus Phase 1: das Wappen blendet bei 0.3 ein,
+die kleine rote Zeile daneben bei 0.6–0.7. Danach baut sich das Layout von oben nach
+unten auf und steht spätestens nach 6.5 s.
+
+### 4a.1 Erinnerung (`erinnerung`, ohne Foto)
+
+| Element | Effekt | Delay | Dauer |
+| --- | --- | --- | --- |
+| Vereinswappen | `fade` | 0.3 | 1.2 |
+| „Heute Abend“ | `scale-in` | 0.8 | 1.0 |
+| Uhrzeit-Zeile (`uhrzeit` + „Uhr“) | `pop`, Ursprung links | 1.9 | 0.9 |
+| Roter Kasten (Liga / Paarung / Halle) | `slide-up`, dist 80 | 3.0 | 1.0 |
+| `zusatz` | `slide-up`, dist 60 | 4.1 | 1.0 |
+| Zeile `verpflegung` | `fade` | 5.1 | 1.0 |
+
+### 4a.2 Spielerporträt (`portrait`)
+
+| Element | Effekt | Delay | Dauer |
+| --- | --- | --- | --- |
+| Foto | `kenburns` | 0 | gesamt |
+| Verlauf über dem Foto | `static` | – | – |
+| Vereinswappen | `fade` | 0.3 | 1.2 |
+| „Aus der Mannschaft“ | `fade` | 0.7 | 1.0 |
+| `spielerName` | `slide-left` | 1.4 | 1.2 |
+| Zeile `spielerRolle` (mit rotem Strich) | `slide-left`, dist 80 | 2.3 | 1.2 |
+| Tischtennisnetz-Linie | `wipe-right` | 3.4 | 0.8 |
+| `text` | `slide-up`, dist 60 | 4.2 | 1.2 |
+
+### 4a.3 Mitglieder werben (`werbung`)
+
+| Element | Effekt | Delay | Dauer |
+| --- | --- | --- | --- |
+| Foto | `kenburns` | 0 | gesamt |
+| Verlauf über dem Foto | `static` | – | – |
+| Vereinswappen | `fade` | 0.3 | 1.2 |
+| „Tischtennis beim SVH“ | `fade` | 0.7 | 1.0 |
+| `titel` | `slide-left` | 1.4 | 1.3 |
+| `text` | `slide-up`, dist 60 | 2.5 | 1.2 |
+| Tischtennisnetz-Linie | `wipe-right` | 3.6 | 0.8 |
+| Zeile Training (`zeiten`) | `slide-up`, dist 60 | 4.3 | 1.0 |
+| Zeile Kontakt (`kontakt`) | `slide-up`, dist 60 | 4.8 | 1.0 |
+| Zeile Instagram (`insta`) | `slide-up`, dist 60 | 5.3 | 1.0 |
+
+Ohne gewähltes Foto blendet `paintNode` den Fotokasten aus; die `kenburns`-Ebene
+entfällt dann von selbst, weil Ebenen ohne Fläche übersprungen werden. Dasselbe gilt
+für die Instagram-Zeile, die `data-hide-empty` trägt.
+
+### 4a.4 Vereinsnachricht (`nachricht`, ohne Foto)
+
+| Element | Effekt | Delay | Dauer |
+| --- | --- | --- | --- |
+| Vereinswappen | `fade` | 0.3 | 1.2 |
+| „Abteilung Tischtennis“ | `fade` | 0.7 | 1.0 |
+| `titel` | `slide-left` | 1.4 | 1.3 |
+| `text` | `slide-up`, dist 60 | 2.7 | 1.3 |
+| Fußzeile (roter Strich + Adresse) | `fade` | 4.1 | 1.0 |
+| … der rote Strich darin | `wipe-right` | 4.2 | 1.1 |
+
+Der rote Strich ist eine verschachtelte Ebene in der Fußzeile: er wird separat
+gezeichnet, seine Deckkraft multipliziert sich mit der der Fußzeile.
+
+### 4a.5 Messwerte
+
+Je Anlass ein Video in `story`, `post45` und `post11`, beide Designs stichprobenartig
+(12 von 24 Kombinationen als Video, alle 24 als Ebenenprüfung):
+
+| | |
+| --- | --- |
+| Format | h264 High, 1080×1920 / 1080×1350 / 1080×1080, 30 fps, 450 Frames, 15.000 s, faststart |
+| Exportzeit | 1.6 – 3.2 s (Desktop-Chromium) |
+| Endframe vs. PNG, ohne Foto | 0.88 – 1.19 % |
+| Endframe vs. PNG, mit `kenburns` | 1.85 – 2.22 % gesamt; außerhalb des Fotokastens 1.0 – 1.2 %, darin 3.1 – 3.6 % |
+| PNG-Export | byte-gleich mit `main`, auch für die vier neuen Anlässe |
+
+Die Werte mit `kenburns` liegen über der 2-%-Marke aus Abschnitt 7, weil das Foto
+weiterzoomt — die in Abschnitt 3 festgehaltene Ausnahme. Außerhalb des Fotokastens
+stimmt der letzte Frame wie gefordert mit dem PNG überein.
+
 ## 5. UI-Änderungen
 
 - `index.html`: neuer Button `<button type="button" class="ghost" id="save-video" hidden>Video speichern</button>`
@@ -291,7 +375,7 @@ Instagram-Story. Ins Ergebnis-Protokoll als offene Punkte aufnehmen.
 | Phase | Inhalt | Abnahme |
 | --- | --- | --- |
 | **1** | `video.js`, UI, Heimspiel + Ergebnis + Wochenvorschau + Ergebnisse der Woche × 3 Formate (Story, 4:5, 1:1) × Dunkel/Hell, Tests | Abschnitt 7 grün für alle vier Anlässe, Jan gibt Look frei |
-| 2 | Choreografien für Erinnerung, Spielerporträt, Mitglieder werben, Vereinsnachricht | je Anlass Kontaktbogen |
+| **2** | Choreografien für Erinnerung, Spielerporträt, Mitglieder werben, Vereinsnachricht — **umgesetzt am 13.11.2026**, siehe Abschnitt 4a | je Anlass Kontaktbogen, Jan gibt Look frei |
 | 3 (optional) | ~~Live-Vorschau im Editor~~ (erledigt), MediaRecorder-Fallback, wählbare Dauer (10 s / 15 s / 20 s) | nach Bedarf |
 
 Archiv-Designs (H, A–F) und Fußball (`R.html`) sind ausdrücklich **nicht** im Umfang.

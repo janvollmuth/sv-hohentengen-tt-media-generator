@@ -342,6 +342,22 @@ selbst darauf.
 Der Knopf erscheint nur, wenn das Layout mindestens ein `data-anim` enthält und
 das Format nicht A4 ist. Der PNG-Export ist davon unberührt.
 
+Animiert sind in den Saison-Designs (dunkel und hell) alle acht Anlässe, jeweils
+als Story, 4:5 und 1:1:
+
+| Anlass | Der Aufbau in Stichworten |
+| --- | --- |
+| Heimspiel | Foto zoomt, Wappen, Etikett „Heimspiel“ stempelt auf, eigene Mannschaft, „gegen“, Gegner, Netzlinie, Liga / Termin / Halle, roter Kasten, Hinweiszeile |
+| Ergebnis | Foto zoomt, Kopfzeile, beide Mannschaftszeilen, Punkte zählen hoch, Ausgang-Plakette, Liga, Zusatztext |
+| Wochenvorschau | Wappen, Etikett, Zeitraum, Überschrift, dann Spielzeile für Spielzeile mit Heim/Auswärts-Marke, zuletzt der Zusatztext |
+| Ergebnisse der Woche | wie Wochenvorschau, dazu zählen je Zeile die Punkte hoch und der Ausgang ploppt auf |
+| Erinnerung | Wappen, „Heute Abend“, Uhrzeit ploppt auf, roter Kasten, Zusatztext, Verpflegungszeile |
+| Spielerporträt | Foto zoomt, Wappen, „Aus der Mannschaft“, Name, Rolle, Netzlinie, Text |
+| Mitglieder werben | Foto zoomt, Wappen, „Tischtennis beim SVH“, Titel, Text, Netzlinie, Training / Kontakt / Instagram |
+| Vereinsnachricht | Wappen, „Abteilung Tischtennis“, Titel, Text, Fußzeile mit Strich, der sich aufzieht |
+
+Die genauen Zeiten stehen in `docs/PLAN-video-export.md`, Abschnitte 4 und 4a.
+
 **Der letzte Frame entspricht dem PNG-Export.** Alle Effekte enden im
 Ruhezustand des Layouts. Wer das Video anhält, sieht also das Bild.
 
