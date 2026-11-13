@@ -129,6 +129,12 @@ ist die Ebene unsichtbar (außer `kenburns`, `count`). Nach dem Ende bleibt sie 
 **Wichtigste Abnahmeregel:** Der **letzte Frame muss dem PNG-Export entsprechen** (bis auf
 Auflösung). Alle Effekte enden also exakt im Ruhezustand des Layouts.
 
+*Entschieden am 13.11.2026 (Jan): `kenburns` ist davon ausgenommen.* Das Foto zoomt wie in
+der abgenommenen Vorschau über die ganzen 15 Sekunden weiter und steht am Ende auf 1.12 —
+sonst wirkt das Standbild nach dem Aufbau eingefroren. Diese Regel und der Hinweis „Foto
+zoomt weiter“ in Abschnitt 4.1 widersprachen sich; so ist es aufgelöst. Gemessen: außerhalb
+des Fotokastens weicht der letzte Frame um 0,98 % vom PNG ab, im Fotokasten um 7,6 %.
+
 ## 4. Choreografien Phase 1: Heimspiel, Ergebnis, Wochenvorschau, Ergebnisse der Woche (Saison-Designs)
 
 Diese vier Anlässe nutzt der Verein aktuell. Alle vier gehören in Phase 1.

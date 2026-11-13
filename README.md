@@ -344,6 +344,11 @@ das Format nicht A4 ist. Der PNG-Export ist davon unberührt.
 **Der letzte Frame entspricht dem PNG-Export.** Alle Effekte enden im
 Ruhezustand des Layouts. Wer das Video anhält, sieht also das Bild.
 
+Eine Ausnahme: `kenburns`. Das Foto zoomt bewusst über die ganzen 15 Sekunden
+weiter und steht am Ende auf 1.12 — so wirkt das Standbild nach dem Aufbau
+nicht eingefroren. Außerhalb des Fotokastens stimmt der letzte Frame mit dem
+PNG überein, im Fotokasten ist er näher herangezoomt.
+
 | | |
 | --- | --- |
 | Auflösung | 1× Layoutgröße: Story 1080 × 1920, 4:5 1080 × 1350, 1:1 1080 × 1080 |
