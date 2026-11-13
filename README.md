@@ -11,8 +11,10 @@ Texte und Foto einsetzen → Bild speichern. Am Layout kann nichts verrutschen.
 ```
 index.html              App-Hülle (ändert sich selten)
 app.css / app.js        Oberfläche und Logik
+video.js                Video-Export (animierte Stories und Beiträge)
 fotos-verwalten.html    Fotos verschlüsseln und ins Paket legen
 admin.js                Logik dazu
+dev/handy-test.py       Testserver per HTTPS, um am Handy zu probieren
 designs/manifest.json   Liste der Design-Vorlagen
 designs/saison-2026-27-dunkel.html  Saison-Design 2026/27, dunkel: alle Anlässe, alle Formate
 designs/saison-2026-27-hell.html    Saison-Design 2026/27, hell: alle Anlässe, alle Formate
@@ -329,11 +331,168 @@ Sie stammen aus dem Design-Board `Instagram Story Template.dc.html` im
 Omelette-Projekt. Änderungen dort werden nach `designs/` übertragen.
 Das Fußball-Design `designs/R.html` kommt genauso aus `Fussball-Design.dc.html`.
 
+## Video-Export
+
+Neben „Bild speichern“ gibt es bei animierten Layouts **„Video speichern“**: das
+Layout baut sich in rund acht Sekunden auf und bleibt dann stehen, insgesamt
+15 Sekunden. Heraus kommt ein MP4 (H.264), das sich direkt nach Instagram oder
+WhatsApp teilen lässt. Ton hat das Video keinen – Musik legt man in Instagram
+selbst darauf.
+
+Der Knopf erscheint nur, wenn das Layout mindestens ein `data-anim` enthält und
+das Format nicht A4 ist. Der PNG-Export ist davon unberührt.
+
+Animiert sind in den Saison-Designs (dunkel und hell) alle acht Anlässe, jeweils
+als Story, 4:5 und 1:1:
+
+| Anlass | Der Aufbau in Stichworten |
+| --- | --- |
+| Heimspiel | Foto zoomt, Wappen, Etikett „Heimspiel“ stempelt auf, eigene Mannschaft, „gegen“, Gegner, Netzlinie, Liga / Termin / Halle, roter Kasten, Hinweiszeile |
+| Ergebnis | Foto zoomt, Kopfzeile, beide Mannschaftszeilen, Punkte zählen hoch, Ausgang-Plakette, Liga, Zusatztext |
+| Wochenvorschau | Wappen, Etikett, Zeitraum, Überschrift, dann Spielzeile für Spielzeile mit Heim/Auswärts-Marke, zuletzt der Zusatztext |
+| Ergebnisse der Woche | wie Wochenvorschau, dazu zählen je Zeile die Punkte hoch und der Ausgang ploppt auf |
+| Erinnerung | Wappen, „Heute Abend“, Uhrzeit ploppt auf, roter Kasten, Zusatztext, Verpflegungszeile |
+| Spielerporträt | Foto zoomt, Wappen, „Aus der Mannschaft“, Name, Rolle, Netzlinie, Text |
+| Mitglieder werben | Foto zoomt, Wappen, „Tischtennis beim SVH“, Titel, Text, Netzlinie, Training / Kontakt / Instagram |
+| Vereinsnachricht | Wappen, „Abteilung Tischtennis“, Titel, Text, Fußzeile mit Strich, der sich aufzieht |
+
+Die genauen Zeiten stehen in `docs/PLAN-video-export.md`, Abschnitte 4 und 4a.
+
+**Der letzte Frame entspricht dem PNG-Export.** Alle Effekte enden im
+Ruhezustand des Layouts. Wer das Video anhält, sieht also das Bild.
+
+Eine Ausnahme: `kenburns`. Das Foto zoomt bewusst über die ganzen 15 Sekunden
+weiter und steht am Ende auf 1.12 — so wirkt das Standbild nach dem Aufbau
+nicht eingefroren. Außerhalb des Fotokastens stimmt der letzte Frame mit dem
+PNG überein, im Fotokasten ist er näher herangezoomt.
+
+| | |
+| --- | --- |
+| Auflösung | 1× Layoutgröße: Story 1080 × 1920, 4:5 1080 × 1350, 1:1 1080 × 1080 |
+| Bildrate | 30 fps |
+| Dauer | 15 s, je Layout über `data-anim-duration` am Wurzelknoten änderbar |
+| Codec | H.264, 8 Mbit/s, Keyframe alle 2 s, MP4 mit `moov` vorne |
+
+Anders als beim Bild wird **nicht** in doppelter Auflösung exportiert: 4K-Video
+zu kodieren scheitert auf vielen Handys.
+
+**Voraussetzung ist WebCodecs:** Chrome, Edge und Safari ab iOS 17. Ältere
+Browser zeigen beim Klick einen Hinweis, der Generator läuft normal weiter.
+Die Video-Bibliothek (mediabunny) wird erst beim ersten Klick nachgeladen.
+
+### Vorschau ohne Export
+
+Neben „Video speichern" steht **„▶ Vorschau"**. Sie spielt die Animation
+direkt im Vorschaurahmen ab, ohne zu kodieren – gut, um Tempo und Reihenfolge
+zu prüfen, bevor man eine Datei erzeugt. Darunter erscheinen ein Zeitbalken
+sowie „Nochmal" und „Schließen".
+
+Die Vorschau nutzt dieselben Ebenen und dasselbe Compositing wie der Export,
+zeigt also genau das, was später im Video steht. Sie schließt sich von selbst,
+sobald sich Text, Format, Anlass oder Design ändern – sonst liefe eine
+veraltete Fassung weiter.
+
+Die vorbereiteten Ebenen werden gemerkt: „Nochmal" startet sofort, und ein
+anschließendes „Video speichern" spart sich das erneute Rendern.
+
+### Am Handy ausprobieren
+
+WebCodecs und `navigator.share` laufen nur in einem „secure context", also
+über HTTPS oder `localhost`. Ein einfaches `python3 -m http.server` reicht
+dafür nicht: über `http://192.168.x.x` bleibt „Video speichern" wirkungslos,
+während der Bild-Export dort normal funktioniert.
+
+```bash
+python3 dev/handy-test.py
+```
+
+Das Skript nennt die Adresse, unter der das Handy im selben WLAN den Rechner
+erreicht (z. B. `https://192.168.178.45:8443/`). Das Zertifikat ist
+selbstsigniert, der Browser warnt also beim ersten Aufruf — iOS „Details
+einblenden" → „Diese Website besuchen", Android „Erweitert" → „Weiter zu …".
+Das Zertifikat liegt in `dev/.zertifikat/` (nicht im Repo) und wird
+wiederverwendet, solange der Rechner dieselbe IP hat.
+
+### Wie ein Layout animiert wird
+
+Das Verhalten steht in `data-`Attributen am Layout, nicht in `video.js`.
+Layouts ohne diese Attribute bleiben, wie sie sind.
+
+| Attribut | Werte | Bedeutung |
+| --- | --- | --- |
+| `data-anim` | siehe Tabelle unten | Effekt |
+| `data-anim-delay` | Sekunden, Standard `0` | Start |
+| `data-anim-dur` | Sekunden, Standard `1.2` (`count`: `1.5`) | Länge |
+| `data-anim-dist` | Pixel, Standard `120` | Weg bei `slide-*` |
+| `data-anim-origin` | `mitte` (Standard), `links`, `rechts` | Ursprung beim Skalieren |
+
+Effekte:
+
+| Effekt | Was passiert |
+| --- | --- |
+| `fade` | Deckkraft 0 → 1 |
+| `slide-up` / `slide-down` / `slide-left` / `slide-right` | fährt um `dist` Pixel ein, dabei einblendend |
+| `scale-in` | Skalierung 0.85 → 1, einblendend |
+| `pop` | Skalierung 0 → 1 mit Überschwinger |
+| `stamp` | Skalierung 1.7 → 1 mit Überschwinger, für die schrägen roten Etiketten |
+| `wipe-right` | wird von links nach rechts aufgedeckt |
+| `kenburns` | Foto zoomt über die ganze Videodauer von 1.0 auf 1.12 |
+| `count` | Zahl zählt von 0 auf den Endwert hoch |
+| `static` | immer voll sichtbar; nur damit die Ebene über einer animierten Ebene liegt (z. B. der Verlauf über dem zoomenden Foto) |
+
+`count` gilt nur für ganze Zahlen von 0 bis 20; bei allem anderen wird
+automatisch `fade` daraus. Eine im Layout gesetzte Drehung (`rotate(-2.5deg)`)
+bleibt bei allen Skalierungs-Effekten erhalten.
+
+**Listen mit wechselnd vielen Zeilen** (Wochenvorschau, Ergebnisse der Woche)
+bekommen am Listen-Container:
+
+| Attribut | Bedeutung |
+| --- | --- |
+| `data-anim-stagger` | Abstand der Zeilenstarts in Sekunden |
+| `data-anim-stagger-start` | wann die erste Zeile startet |
+
+Ausgeblendete Zeilen (`data-hide-empty`) werden übersprungen. Delays von
+Elementen **innerhalb** einer Zeile gelten relativ zum Start dieser Zeile.
+Ein Element nach der Liste bekommt `data-anim-after="list"`: es startet,
+nachdem die letzte Zeile begonnen hat, plus seinem eigenen Delay.
+
+Verschachtelung ist erlaubt: ein `data-anim` in einem anderen `data-anim` wird
+in der Eltern-Ebene ausgeblendet und separat gezeichnet, seine Bewegung addiert
+sich zur Eltern-Ebene. So zählt der Punktestand hoch, während seine Zeile noch
+einfährt.
+
+### Wie es technisch läuft
+
+**Immer nur ein Export auf einmal.** Beim Vorbereiten der Ebenen werden Teile
+des Layouts kurz ausgeblendet und danach wieder eingeblendet. Liefe ein
+zweiter Export gleichzeitig, würde er diesen Zwischenzustand als Normalzustand
+missverstehen und am Ende wiederherstellen — der Bild-Export lieferte dann ein
+fast leeres Bild, ohne jede Fehlermeldung. Darum sperren „Bild speichern",
+„Alle Formate als Paket", „Video speichern" und „▶ Vorschau" einander, solange
+einer von ihnen arbeitet.
+
+Wie beim PNG-Export wird jede Ebene geprüft und notfalls neu gerendert:
+html-to-image lässt ein frisch gesetztes, großes Foto gelegentlich aus. Bleibt
+eine Ebene vollständig durchsichtig, obwohl ihr Element sichtbar ist, wird bis
+zu viermal neu gerendert — sonst fehlte das Foto im Video, während es im Bild
+zu sehen ist.
+
+Nicht jeder Frame wird per html-to-image gerendert – das wäre am Handy zu
+langsam. Stattdessen wird das Layout einmal ohne die animierten Elemente
+gerendert (Grundebene) und dann je animiertem Element einmal mit transparentem
+Grund, zugeschnitten auf dessen Rechteck. Pro Frame zeichnet `video.js` diese
+Bitmaps mit Verschiebung, Skalierung und Deckkraft auf ein Canvas; kodiert wird
+per WebCodecs, gemuxt per mediabunny.
+
+Ein Story-Video mit 450 Frames entsteht am Rechner in rund drei Sekunden.
+
 ## Nach dem Hochladen: Versionsnummer
 
-In `index.html` hängen `app.js` und `app.css` mit `?v=…` (Datum) an. Bei jeder
-Änderung an `app.js` oder `app.css` das Datum erhöhen – sonst zeigen Browser und
-Handys bis zu einigen Stunden noch die alte, zwischengespeicherte Version.
+In `index.html` hängen `app.js`, `app.css` und `video.js` mit `?v=…` (Datum) an.
+Bei jeder Änderung an einer dieser Dateien das Datum erhöhen – sonst zeigen
+Browser und Handys bis zu einigen Stunden noch die alte, zwischengespeicherte
+Version.
 
 ## Exportgröße
 

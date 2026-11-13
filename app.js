@@ -1737,6 +1737,21 @@ function sync() {
   packBtn.hidden = others.length < 2;
   packBtn.textContent = 'Alle ' + others.length + ' Formate als Paket';
 
+  /* Video-Export und Live-Vorschau (video.js): nur wo das Layout
+     Animationen mitbringt und nicht für A4. Layouts ohne [data-anim]
+     verhalten sich wie bisher. */
+  var animiert = fmt.id !== 'a4'
+    && typeof videoAnimated === 'function'
+    && videoAnimated(node);
+  var vidBtn = document.getElementById('save-video');
+  if (vidBtn) vidBtn.hidden = !animiert;
+  var vorBtn = document.getElementById('preview-video');
+  if (vorBtn) vorBtn.hidden = !animiert;
+  /* Beim Wechsel von Anlass, Format oder Design zeigt eine offene
+     Vorschau das falsche Layout; die vorbereiteten Ebenen passen dann
+     auch nicht mehr. */
+  if (typeof videoAufraeumen === 'function') videoAufraeumen();
+
   hintEl.textContent = fmt.id === 'a4'
     ? 'A4 mit 300 dpi — zum Ausdrucken oder per Mail an die Druckerei. Nach dem Erzeugen kannst du teilen oder speichern.'
     : fmt.note + ' px. Nach dem Erzeugen kannst du teilen oder speichern — Teilen (Instagram, WhatsApp) bietet der Browser am Handy an.';
@@ -1920,7 +1935,10 @@ function deliver(files) {
 
     var h = document.createElement('div');
     h.className = 'sheet-h';
-    h.textContent = files.length > 1 ? files.length + ' Bilder fertig' : 'Bild fertig';
+    /* Überschrift aus dem Dateityp: Video oder Bild (video.js liefert MP4). */
+    var istVideo = files.length === 1 && /^video\//.test(files[0].type || '');
+    h.textContent = istVideo ? 'Video fertig'
+      : files.length > 1 ? files.length + ' Bilder fertig' : 'Bild fertig';
     var sub = document.createElement('div');
     sub.className = 'sheet-sub';
     sub.textContent = files.map(function (f) { return f.name; }).join(', ');
@@ -1986,15 +2004,24 @@ function fail(e) {
 var oneBtn = document.getElementById('save-one');
 oneBtn.addEventListener('click', function () {
   busy(oneBtn, true);
+  /* Sperre aus video.js: während ein Export läuft, darf kein zweiter an
+     dasselbe Layout — sonst erwischt einer von beiden ein halb
+     ausgeblendetes Layout. Ohne video.js passiert hier nichts. */
+  if (typeof layoutSperren === 'function') layoutSperren();
   renderFile(state.occasion, state.format, state.design)
     .then(function (f) { return deliver([f]); })
     .catch(fail)
-    .then(function () { busy(oneBtn, false); });
+    .then(function () {
+      if (typeof layoutFreigeben === 'function') layoutFreigeben();
+      busy(oneBtn, false);
+    });
 });
 
 /* Fortschrittsbalken mit Zähler: vier Formate brauchen zusammen einige
-   Sekunden — ohne Anzeige wirkt das wie ein Hänger. */
-function progress(total) {
+   Sekunden — ohne Anzeige wirkt das wie ein Hänger.
+   labelFn und anchor sind für video.js nachgerüstet: ohne beide verhält
+   sich progress() genau wie vorher (Text „Bild n von m“, hinter #save-pack). */
+function progress(total, labelFn, anchor) {
   var box = document.createElement('div');
   box.className = 'prog';
   var lab = document.createElement('div');
@@ -2005,13 +2032,20 @@ function progress(total) {
   bar.className = 'prog-b';
   track.appendChild(bar);
   box.appendChild(lab); box.appendChild(track);
-  packBtn.parentNode.insertBefore(box, packBtn.nextSibling);
+  var host = anchor || packBtn;
+  host.parentNode.insertBefore(box, host.nextSibling);
   return {
     step: function (n, name) {
-      lab.textContent = 'Bild ' + n + ' von ' + total + (name ? ' · ' + name : '');
+      lab.textContent = labelFn ? labelFn(n, total, name)
+        : 'Bild ' + n + ' von ' + total + (name ? ' · ' + name : '');
       bar.style.width = Math.round((n - 1) / total * 100) + '%';
     },
     doneStep: function (n) { bar.style.width = Math.round(n / total * 100) + '%'; },
+    /* Freie Beschriftung mit Anteil 0…1 — für Phasen ohne Stückzahl. */
+    note: function (text, frac) {
+      lab.textContent = text;
+      bar.style.width = Math.round(Math.max(0, Math.min(1, frac || 0)) * 100) + '%';
+    },
     end: function () { box.remove(); }
   };
 }
@@ -2020,6 +2054,8 @@ var packBtn = document.getElementById('save-pack');
 packBtn.addEventListener('click', function () {
   var list = formatsForDesign(state.occasion, state.design);
   busy(packBtn, true, 'Erzeuge …');
+  /* Sperre aus video.js, siehe „Bild speichern“. */
+  if (typeof layoutSperren === 'function') layoutSperren();
   var p = progress(list.length);
   var files = [];
   list.reduce(function (prev, f, i) {
@@ -2033,7 +2069,11 @@ packBtn.addEventListener('click', function () {
   }, Promise.resolve())
     .then(function () { p.end(); return deliver(files); })
     .catch(fail)
-    .then(function () { p.end(); busy(packBtn, false); });
+    .then(function () {
+      p.end();
+      if (typeof layoutFreigeben === 'function') layoutFreigeben();
+      busy(packBtn, false);
+    });
 });
 
 boot();
